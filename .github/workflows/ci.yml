@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - '**'
+    tags-ignore:
+      - '**'
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore AutoCorrect.sln
+
+      - name: Build
+        run: dotnet build AutoCorrect.sln -c Release --no-restore
+
+      - name: Test
+        # Exits with 1 as soon as a single test fails.
+        run: dotnet run --project tests/AutoCorrect.Core.Tests -c Release --no-build
+
+      - name: Publish smoke test
+        run: >
+          dotnet publish src/AutoCorrect.App/AutoCorrect.App.csproj
+          -c Release -r win-x64 --self-contained false
+          -p:PublishSingleFile=true -p:DebugType=none
+          -o publish/smoke

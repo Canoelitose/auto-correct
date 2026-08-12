@@ -1,0 +1,128 @@
+name: Release
+
+# Runs on a tag such as v1.0.0 or v1.0.0-phase1, or manually from the Actions tab.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag for the release, for example v1.0.1'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    # A Windows runner on purpose: it is the only place where the WPF build is also
+    # exercised on the target platform.
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore AutoCorrect.sln
+
+      - name: Build
+        run: dotnet build AutoCorrect.sln -c Release --no-restore
+
+      - name: Test
+        run: dotnet run --project tests/AutoCorrect.Core.Tests -c Release --no-build
+
+      - name: Publish self-contained (no runtime needed on the target machine)
+        run: >
+          dotnet publish src/AutoCorrect.App/AutoCorrect.App.csproj
+          -c Release -r win-x64 --self-contained true
+          -p:PublishSingleFile=true
+          -p:EnableCompressionInSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:DebugType=none
+          -o publish/self-contained
+
+      - name: Publish framework-dependent (needs the .NET 8 Desktop Runtime)
+        run: >
+          dotnet publish src/AutoCorrect.App/AutoCorrect.App.csproj
+          -c Release -r win-x64 --self-contained false
+          -p:PublishSingleFile=true
+          -p:DebugType=none
+          -o publish/framework-dependent
+
+      - name: Name the artefacts
+        shell: pwsh
+        run: |
+          $tag = if ($env:GITHUB_REF_TYPE -eq 'tag') { $env:GITHUB_REF_NAME } else { '${{ inputs.tag }}' }
+          "TAG=$tag" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item publish/self-contained/AutoCorrect.exe      "dist/AutoCorrect-$tag-win-x64.exe"
+          Copy-Item publish/framework-dependent/AutoCorrect.exe "dist/AutoCorrect-$tag-win-x64-runtime-required.exe"
+
+          # A checksum file, so a download can be verified.
+          Get-ChildItem dist -Filter *.exe | ForEach-Object {
+              $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
+              "$hash  $($_.Name)"
+          } | Out-File -Encoding ascii dist/SHA256SUMS.txt
+
+          Get-ChildItem dist | Format-Table Name, Length
+
+      - name: Upload artefacts to the workflow run
+        uses: actions/upload-artifact@v4
+        with:
+          name: AutoCorrect-${{ env.TAG }}
+          path: dist/*
+
+      - name: Create the release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAG }}
+          name: AutoCorrect ${{ env.TAG }}
+          # Anything with a suffix such as -phase1 or -rc1 is published as a pre-release.
+          prerelease: ${{ contains(env.TAG, '-') }}
+          generate_release_notes: true
+          files: dist/*
+          body: |
+            ## Download
+
+            | Datei | Grösse | Voraussetzung |
+            |---|---|---|
+            | `AutoCorrect-${{ env.TAG }}-win-x64.exe` | ca. 63 MB | keine – einfach starten |
+            | `AutoCorrect-${{ env.TAG }}-win-x64-runtime-required.exe` | ca. 0.4 MB | .NET 8 Desktop Runtime |
+
+            Windows 10 (1809+) oder Windows 11, x64.
+
+            ## Vor dem ersten Start
+
+            AutoCorrect braucht einen lokal laufenden LanguageTool-Server:
+
+            ```powershell
+            java -cp "languagetool-server.jar;libs/*" org.languagetool.server.HTTPServer --port 8081
+            ```
+
+            Anleitung: [docs/SETUP-LANGUAGETOOL.md](https://github.com/${{ github.repository }}/blob/${{ env.TAG }}/docs/SETUP-LANGUAGETOOL.md)
+
+            ## Benutzen
+
+            Die Anwendung startet ohne Fenster, nur als Icon im System-Tray.
+
+            | Taste | Wirkung |
+            |---|---|
+            | `Ctrl + Alt + Space` | Text markieren, Hotkey drücken, Popup mit der Korrektur erscheint |
+            | `Enter` | Ergebnis übernehmen und einfügen |
+            | `Esc` | abbrechen |
+            | `Ctrl + C` | Ergebnis nur kopieren |
+
+            ## Hinweise
+
+            - Die Exe ist nicht signiert. SmartScreen meldet sich beim ersten Start:
+              *Weitere Informationen* → *Trotzdem ausführen*.
+            - Anwendungen mit Administratorrechten sind für ein normal laufendes Tool
+              nicht lesbar (Windows-Sicherheitsgrenze UIPI).
+            - Prüfsummen stehen in `SHA256SUMS.txt`.

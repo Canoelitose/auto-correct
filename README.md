@@ -9,6 +9,27 @@ Phase 3 (Fähigkeitsprüfung, Verteilung) sind vorbereitet, aber noch nicht impl
 
 ---
 
+## Download
+
+Fertige Exe unter [Releases](https://github.com/Canoelitose/auto-correct/releases):
+
+| Datei | Grösse | Voraussetzung |
+|---|---|---|
+| `AutoCorrect-<version>-win-x64.exe` | ca. 63 MB | keine – herunterladen und starten |
+| `AutoCorrect-<version>-win-x64-runtime-required.exe` | ca. 0.4 MB | .NET 8 Desktop Runtime |
+
+Windows 10 (1809+) oder Windows 11, x64. Die Exe ist nicht signiert, deshalb meldet sich
+SmartScreen beim ersten Start: *Weitere Informationen* → *Trotzdem ausführen*.
+
+Ein neues Release entsteht durch einen Tag; GitHub Actions baut und veröffentlicht beide
+Varianten (`.github/workflows/release.yml`):
+
+```bash
+git tag v1.0.1 && git push origin v1.0.1
+```
+
+---
+
 ## Schnellstart
 
 ### 1. LanguageTool starten
