@@ -84,8 +84,11 @@ public partial class PopupWindow : Window
         PreviewKeyDown += OnPreviewKeyDown;
     }
 
-    /// <summary>True while a popup session is open. The hotkey is ignored in that case.</summary>
-    public bool IsSessionActive => _sessionActive;
+    /// <summary>
+    /// True while a popup session is open or the result is still being inserted. The hotkey is
+    /// ignored in that case; a second run during the insertion would fight over the clipboard.
+    /// </summary>
+    public bool IsSessionActive => _sessionActive || _applying;
 
     /// <summary>
     /// Renders the window once off screen so the first real invocation does not pay for the
