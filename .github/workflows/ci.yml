@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - '**'
+      # Release branches are handled by release.yml, which builds and tests as well.
+      - '!release/**'
     tags-ignore:
       - '**'
   pull_request:

@@ -21,12 +21,15 @@ Fertige Exe unter [Releases](https://github.com/Canoelitose/auto-correct/release
 Windows 10 (1809+) oder Windows 11, x64. Die Exe ist nicht signiert, deshalb meldet sich
 SmartScreen beim ersten Start: *Weitere Informationen* → *Trotzdem ausführen*.
 
-Ein neues Release entsteht durch einen Tag; GitHub Actions baut und veröffentlicht beide
-Varianten (`.github/workflows/release.yml`):
+Ein neues Release baut und veröffentlicht GitHub Actions (`.github/workflows/release.yml`).
+Drei Wege, alle mit dem gleichen Ergebnis:
 
 ```bash
-git tag v1.0.1 && git push origin v1.0.1
+git tag v1.0.1 && git push origin v1.0.1        # Tag pushen
+git push origin HEAD:release/v1.0.1             # Branch pushen, der Workflow legt den Tag an
 ```
+
+oder in GitHub unter *Actions* → *Release* → *Run workflow* die Version eintippen.
 
 ---
 

@@ -1,10 +1,15 @@
 name: Release
 
-# Runs on a tag such as v1.0.0 or v1.0.0-phase1, or manually from the Actions tab.
+# Three ways to cut a release:
+#   1. push a tag such as v1.0.0
+#   2. push a branch release/v1.0.0 - the workflow creates the tag itself
+#   3. run it manually from the Actions tab and type the tag
 on:
   push:
     tags:
       - 'v*'
+    branches:
+      - 'release/v*'
   workflow_dispatch:
     inputs:
       tag:
@@ -58,7 +63,17 @@ jobs:
       - name: Name the artefacts
         shell: pwsh
         run: |
-          $tag = if ($env:GITHUB_REF_TYPE -eq 'tag') { $env:GITHUB_REF_NAME } else { '${{ inputs.tag }}' }
+          $tag = if ($env:GITHUB_REF_TYPE -eq 'tag') {
+              $env:GITHUB_REF_NAME
+          } elseif ($env:GITHUB_REF_NAME -like 'release/*') {
+              # Branch release/v1.0.0 -> tag v1.0.0. The release step creates the tag.
+              $env:GITHUB_REF_NAME -replace '^release/', ''
+          } else {
+              '${{ inputs.tag }}'
+          }
+
+          if (-not $tag) { throw 'No tag could be determined for this run.' }
+          Write-Host "Release tag: $tag"
           "TAG=$tag" | Out-File -FilePath $env:GITHUB_ENV -Append
 
           New-Item -ItemType Directory -Force -Path dist | Out-Null
@@ -83,6 +98,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.TAG }}
+          # Created at this commit when the tag does not exist yet.
+          target_commitish: ${{ github.sha }}
           name: AutoCorrect ${{ env.TAG }}
           # Anything with a suffix such as -phase1 or -rc1 is published as a pre-release.
           prerelease: ${{ contains(env.TAG, '-') }}
