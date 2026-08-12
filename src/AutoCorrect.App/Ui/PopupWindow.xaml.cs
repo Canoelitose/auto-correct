@@ -35,6 +35,14 @@ public partial class PopupWindow : Window
     private readonly Dictionary<ProcessingMode, Button> _modeButtons = new();
 
     private CancellationTokenSource? _cts;
+
+    /// <summary>
+    /// Generation counter. A run that has been superseded by a mode switch must not touch the
+    /// UI any more: its continuation would otherwise clear the busy state of the newer run.
+    /// </summary>
+    private int _runId;
+
+    private string? _fallbackNote;
     private string _original = string.Empty;
     private IntPtr _targetWindow;
     private ProcessingMode _mode = ProcessingMode.Correct;
@@ -63,7 +71,11 @@ public partial class PopupWindow : Window
         {
             var captured = mode;
             button.Content = UiText.ModeLabel(mode);
-            button.Click += (_, _) => StartProcessing(captured);
+            button.Click += (_, _) =>
+            {
+                _fallbackNote = null;
+                StartProcessing(captured);
+            };
         }
 
         EngineLabel.Text = _engine.Name;
@@ -71,6 +83,9 @@ public partial class PopupWindow : Window
         Deactivated += OnDeactivated;
         PreviewKeyDown += OnPreviewKeyDown;
     }
+
+    /// <summary>True while a popup session is open. The hotkey is ignored in that case.</summary>
+    public bool IsSessionActive => _sessionActive;
 
     /// <summary>
     /// Renders the window once off screen so the first real invocation does not pay for the
@@ -124,12 +139,13 @@ public partial class PopupWindow : Window
         UpdateModeAvailability();
 
         var mode = requestedMode;
-        string? note = null;
+        _fallbackNote = null;
         if (!_engine.SupportsMode(mode))
         {
             // Phase 1 has no LLM engine: fall back instead of showing an error for a mode the
-            // user did not explicitly pick.
-            note = $"{UiText.ModeLabel(mode)} ist nicht verfügbar – {UiText.ModeCorrect} wird verwendet.";
+            // user did not explicitly pick. The note stays visible in the status line until the
+            // user picks a mode themselves.
+            _fallbackNote = $"{UiText.ModeLabel(mode)} ist nicht verfügbar – {UiText.ModeCorrect} wird verwendet.";
             mode = ProcessingMode.Correct;
         }
 
@@ -140,11 +156,6 @@ public partial class PopupWindow : Window
         Activate();
         TextInjector.BringToForeground(new WindowInteropHelper(this).Handle);
         ResultBox.Focus();
-
-        if (note is not null)
-        {
-            SetStatus(note);
-        }
 
         StartProcessing(mode);
     }
@@ -165,6 +176,7 @@ public partial class PopupWindow : Window
     {
         CancelRunning();
 
+        var runId = ++_runId;
         var cts = new CancellationTokenSource();
         _cts = cts;
         var ct = cts.Token;
@@ -203,6 +215,11 @@ public partial class PopupWindow : Window
                 },
                 ct).ConfigureAwait(true);
 
+            if (runId != _runId)
+            {
+                return;
+            }
+
             FlushPending();
 
             var unchanged = string.Equals(ResultBox.Text, _original, StringComparison.Ordinal);
@@ -211,26 +228,41 @@ public partial class PopupWindow : Window
         }
         catch (OperationCanceledException)
         {
-            SetStatus(UiText.StatusCancelled);
+            if (runId == _runId)
+            {
+                SetStatus(UiText.StatusCancelled);
+            }
         }
         catch (EngineUnavailableException ex)
         {
-            ShowError(ex.Message);
+            if (runId == _runId)
+            {
+                ShowError(ex.Message);
+            }
         }
         catch (NotSupportedException ex)
         {
             Log.Warn("Engine rejected the requested mode.", ex);
-            ShowError(UiText.ModeNotSupported);
+            if (runId == _runId)
+            {
+                ShowError(UiText.ModeNotSupported);
+            }
         }
         catch (Exception ex)
         {
             Log.Error("Processing failed.", ex);
-            ShowError(UiText.UnexpectedError);
+            if (runId == _runId)
+            {
+                ShowError(UiText.UnexpectedError);
+            }
         }
         finally
         {
-            SetBusy(false);
-            ResultBox.IsReadOnly = false;
+            if (runId == _runId)
+            {
+                SetBusy(false);
+                ResultBox.IsReadOnly = false;
+            }
 
             if (ReferenceEquals(_cts, cts))
             {
@@ -381,6 +413,7 @@ public partial class PopupWindow : Window
         }
 
         _sessionActive = false;
+        _runId++;
         CancelRunning();
         _flushTimer.Stop();
         SetBusy(false);
@@ -405,7 +438,8 @@ public partial class PopupWindow : Window
         }
     }
 
-    private void SetStatus(string text) => StatusText.Text = text;
+    private void SetStatus(string text) =>
+        StatusText.Text = _fallbackNote is null ? text : $"{text} · {_fallbackNote}";
 
     private void ShowError(string message)
     {

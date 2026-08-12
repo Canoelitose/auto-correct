@@ -122,6 +122,22 @@ public sealed class AppController : IDisposable
             return;
         }
 
+        // A modal settings dialog disables the other windows of the process, so a popup opened
+        // now would be visible but unusable.
+        if (_settingsWindow is not null)
+        {
+            _settingsWindow.Activate();
+            return;
+        }
+
+        // Pressing the hotkey again while the popup is open would read the selection of our own
+        // result box instead of the original application.
+        if (_popup.IsSessionActive)
+        {
+            _popup.Activate();
+            return;
+        }
+
         _busy = true;
         try
         {

@@ -32,6 +32,9 @@ public sealed class ClipboardSnapshot
 
     private readonly Dictionary<string, object> _data = new(StringComparer.Ordinal);
 
+    /// <summary>True when the clipboard held something before the snapshot was taken.</summary>
+    private bool _hadContent;
+
     private ClipboardSnapshot()
     {
     }
@@ -48,6 +51,8 @@ public sealed class ClipboardSnapshot
         {
             return snapshot;
         }
+
+        snapshot._hadContent = source.GetFormats(autoConvert: false).Length > 0;
 
         foreach (var format in PreservedFormats)
         {
@@ -78,6 +83,14 @@ public sealed class ClipboardSnapshot
     {
         if (_data.Count == 0)
         {
+            if (_hadContent)
+            {
+                // The clipboard held only formats that cannot be round tripped (COM backed or
+                // non serialisable payloads). Clearing is the honest outcome; leaving our own
+                // copy behind would be worse.
+                Log.Warn("Previous clipboard content could not be preserved and was cleared.");
+            }
+
             await RetryAsync(
                 () =>
                 {
