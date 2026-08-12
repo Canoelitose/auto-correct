@@ -1,0 +1,52 @@
+<Window x:Class="AutoCorrect.App.Ui.AboutWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Über AutoCorrect"
+        Width="460"
+        Height="360"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen"
+        Background="#FFFDFDFD"
+        UseLayoutRounding="True"
+        TextOptions.TextFormattingMode="Display"
+        FontFamily="Segoe UI"
+        FontSize="13">
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0">
+            <TextBlock Text="AutoCorrect" FontSize="20" FontWeight="SemiBold" />
+            <TextBlock x:Name="VersionText" Foreground="#FF71717A" Margin="0,2,0,0" />
+            <TextBlock Text="Lokale Textkorrektur – die Verarbeitung verlässt das Gerät nicht."
+                       TextWrapping="Wrap"
+                       Margin="0,10,0,0" />
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" Margin="0,14,0,0" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <TextBlock x:Name="DetailsText" TextWrapping="Wrap" FontSize="12" Foreground="#FF3F3F46" />
+                <TextBlock Text="Hinweis"
+                           FontWeight="SemiBold"
+                           Margin="0,14,0,4" />
+                <TextBlock TextWrapping="Wrap"
+                           FontSize="12"
+                           Foreground="#FF3F3F46"
+                           Text="Anwendungen, die als Administrator laufen, sind für AutoCorrect nicht lesbar (Windows-Sicherheitsgrenze UIPI). Dort bleibt die Auswahl leer." />
+            </StackPanel>
+        </ScrollViewer>
+
+        <Button x:Name="CloseButton"
+                Grid.Row="2"
+                HorizontalAlignment="Right"
+                Margin="0,16,0,0"
+                Padding="18,6"
+                Content="Schliessen"
+                IsDefault="True"
+                IsCancel="True" />
+    </Grid>
+</Window>

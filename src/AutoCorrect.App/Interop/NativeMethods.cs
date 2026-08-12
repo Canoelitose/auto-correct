@@ -1,0 +1,303 @@
+using System.Runtime.InteropServices;
+
+namespace AutoCorrect.App.Interop;
+
+/// <summary>
+/// Every P/Invoke declaration of the application. Nothing outside this file talks to user32,
+/// kernel32, shell32 or shcore directly.
+/// </summary>
+internal static class NativeMethods
+{
+    // ---------------------------------------------------------------- window messages
+
+    public const int WM_HOTKEY = 0x0312;
+    public const int WM_LBUTTONUP = 0x0202;
+    public const int WM_LBUTTONDBLCLK = 0x0203;
+    public const int WM_RBUTTONUP = 0x0205;
+    public const int WM_CONTEXTMENU = 0x007B;
+
+    /// <summary>Sent to the tray callback when the user activates the icon (NIN_SELECT).</summary>
+    public const int NIN_SELECT = 0x0400;
+    public const int NIN_KEYSELECT = 0x0401;
+
+    // ---------------------------------------------------------------- hotkeys
+
+    public const uint MOD_NOREPEAT = 0x4000;
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+
+    // ---------------------------------------------------------------- input simulation
+
+    public const uint INPUT_KEYBOARD = 1;
+    public const uint KEYEVENTF_KEYUP = 0x0002;
+
+    public const ushort VK_SHIFT = 0x10;
+    public const ushort VK_CONTROL = 0x11;
+    public const ushort VK_MENU = 0x12;
+    public const ushort VK_LSHIFT = 0xA0;
+    public const ushort VK_RSHIFT = 0xA1;
+    public const ushort VK_LCONTROL = 0xA2;
+    public const ushort VK_RCONTROL = 0xA3;
+    public const ushort VK_LMENU = 0xA4;
+    public const ushort VK_RMENU = 0xA5;
+    public const ushort VK_LWIN = 0x5B;
+    public const ushort VK_RWIN = 0x5C;
+    public const ushort VK_C = 0x43;
+    public const ushort VK_V = 0x56;
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct INPUT
+    {
+        public uint Type;
+        public InputUnion Data;
+    }
+
+    [StructLayout(LayoutKind.Explicit)]
+    public struct InputUnion
+    {
+        [FieldOffset(0)]
+        public MOUSEINPUT Mouse;
+
+        [FieldOffset(0)]
+        public KEYBDINPUT Keyboard;
+
+        [FieldOffset(0)]
+        public HARDWAREINPUT Hardware;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct MOUSEINPUT
+    {
+        public int Dx;
+        public int Dy;
+        public uint MouseData;
+        public uint Flags;
+        public uint Time;
+        public IntPtr ExtraInfo;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct KEYBDINPUT
+    {
+        public ushort Vk;
+        public ushort Scan;
+        public uint Flags;
+        public uint Time;
+        public IntPtr ExtraInfo;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct HARDWAREINPUT
+    {
+        public uint Msg;
+        public ushort ParamL;
+        public ushort ParamH;
+    }
+
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern uint SendInput(uint nInputs, [In] INPUT[] pInputs, int cbSize);
+
+    [DllImport("user32.dll")]
+    public static extern short GetAsyncKeyState(int vKey);
+
+    // ---------------------------------------------------------------- windows and focus
+
+    [DllImport("user32.dll")]
+    public static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool BringWindowToTop(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool IsWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, [MarshalAs(UnmanagedType.Bool)] bool attach);
+
+    [DllImport("kernel32.dll")]
+    public static extern uint GetCurrentThreadId();
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern IntPtr GetModuleHandle(string? moduleName);
+
+    // ---------------------------------------------------------------- cursor, monitors, DPI
+
+    public const uint MONITOR_DEFAULTTONEAREST = 0x00000002;
+
+    public const uint SWP_NOSIZE = 0x0001;
+    public const uint SWP_NOZORDER = 0x0004;
+    public const uint SWP_NOACTIVATE = 0x0010;
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct POINT
+    {
+        public int X;
+        public int Y;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct RECT
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+
+        public int Width => Right - Left;
+
+        public int Height => Bottom - Top;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct MONITORINFO
+    {
+        public int CbSize;
+        public RECT Monitor;
+        public RECT WorkArea;
+        public uint Flags;
+    }
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool GetCursorPos(out POINT point);
+
+    [DllImport("user32.dll")]
+    public static extern IntPtr MonitorFromPoint(POINT point, uint flags);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool GetMonitorInfo(IntPtr monitor, ref MONITORINFO monitorInfo);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool SetWindowPos(
+        IntPtr hWnd,
+        IntPtr hWndInsertAfter,
+        int x,
+        int y,
+        int cx,
+        int cy,
+        uint flags);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool GetWindowRect(IntPtr hWnd, out RECT rect);
+
+    /// <summary>MDT_EFFECTIVE_DPI. Available from Windows 8.1, guarded by a try/catch at the call site.</summary>
+    public const int MDT_EFFECTIVE_DPI = 0;
+
+    [DllImport("Shcore.dll")]
+    public static extern int GetDpiForMonitor(IntPtr monitor, int dpiType, out uint dpiX, out uint dpiY);
+
+    // ---------------------------------------------------------------- tray icon
+
+    public const int NIM_ADD = 0x00000000;
+    public const int NIM_MODIFY = 0x00000001;
+    public const int NIM_DELETE = 0x00000002;
+    public const int NIM_SETVERSION = 0x00000004;
+
+    public const int NIF_MESSAGE = 0x00000001;
+    public const int NIF_ICON = 0x00000002;
+    public const int NIF_TIP = 0x00000004;
+    public const int NIF_INFO = 0x00000010;
+    public const int NIF_SHOWTIP = 0x00000080;
+
+    public const int NIIF_NONE = 0x00000000;
+    public const int NIIF_INFO = 0x00000001;
+    public const int NIIF_WARNING = 0x00000002;
+    public const int NIIF_ERROR = 0x00000003;
+
+    public const uint NOTIFYICON_VERSION_4 = 4;
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    public struct NOTIFYICONDATA
+    {
+        public int CbSize;
+        public IntPtr Wnd;
+        public int Id;
+        public int Flags;
+        public int CallbackMessage;
+        public IntPtr Icon;
+
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
+        public string Tip;
+
+        public int State;
+        public int StateMask;
+
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
+        public string Info;
+
+        /// <summary>Union of uTimeout and uVersion; used as the version with NIM_SETVERSION.</summary>
+        public uint VersionOrTimeout;
+
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 64)]
+        public string InfoTitle;
+
+        public int InfoFlags;
+        public Guid GuidItem;
+        public IntPtr BalloonIcon;
+    }
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool Shell_NotifyIcon(int message, ref NOTIFYICONDATA data);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    public static extern uint RegisterWindowMessage(string message);
+
+    // ---------------------------------------------------------------- icons
+
+    public const int IMAGE_ICON = 1;
+    public const uint LR_DEFAULTSIZE = 0x00000040;
+    public const uint LR_SHARED = 0x00008000;
+
+    /// <summary>Resource id the C# compiler assigns to the application icon.</summary>
+    public const int APPLICATION_ICON_RESOURCE_ID = 32512;
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern IntPtr LoadImage(
+        IntPtr instance,
+        IntPtr name,
+        int type,
+        int cx,
+        int cy,
+        uint load);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern IntPtr LoadIcon(IntPtr instance, IntPtr iconName);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool DestroyIcon(IntPtr icon);
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+    public static extern uint ExtractIconEx(
+        string file,
+        int iconIndex,
+        out IntPtr largeIcon,
+        out IntPtr smallIcon,
+        uint icons);
+
+    [DllImport("user32.dll")]
+    public static extern int GetSystemMetrics(int index);
+
+    public const int SM_CXSMICON = 49;
+    public const int SM_CYSMICON = 50;
+}

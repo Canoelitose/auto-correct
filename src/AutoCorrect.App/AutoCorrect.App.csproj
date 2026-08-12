@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <!-- Plain net8.0-windows, not net8.0-windows10.0.x: the Windows SDK projections are not
+         needed here and would pull in a large dependency. The minimum supported version
+         (Windows 10 1809) is declared in app.manifest; APIs that are newer than the baseline
+         (GetDpiForMonitor) are called through a guarded P/Invoke. -->
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>false</UseWindowsForms>
+    <LangVersion>12.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>AutoCorrect.App</RootNamespace>
+    <AssemblyName>AutoCorrect</AssemblyName>
+    <Version>1.0.0</Version>
+    <Product>AutoCorrect</Product>
+    <Company>AutoCorrect</Company>
+    <ApplicationIcon>Assets\tray.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <!-- Lets the project restore and build from a non Windows machine (CI, containers).
+         Running it still requires Windows. -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <!-- Keeps idle memory down: no extra background JIT threads for a tray application. -->
+    <TieredPGO>true</TieredPGO>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AutoCorrect.Core\AutoCorrect.Core.csproj" />
+  </ItemGroup>
+
+</Project>
