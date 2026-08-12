@@ -143,3 +143,8 @@ jobs:
             - Anwendungen mit Administratorrechten sind für ein normal laufendes Tool
               nicht lesbar (Windows-Sicherheitsgrenze UIPI).
             - Prüfsummen stehen in `SHA256SUMS.txt`.
+
+      - name: Remove the release branch
+        # The tag now carries the release; the temporary branch has served its purpose.
+        if: success() && startsWith(github.ref, 'refs/heads/release/')
+        run: git push origin --delete "${{ github.ref_name }}"
