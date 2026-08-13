@@ -50,9 +50,13 @@ umschreiben.
 
 | Engine | Kann | Aufwand |
 |---|---|---|
-| Windows-Rechtschreibprüfung | Rechtschreibung, Deutsch und Englisch | keiner, ist in Windows enthalten |
-| LanguageTool | zusätzlich Grammatik und Zeichensetzung | Java + Server starten |
-| Sprachmodell (Ollama) | Umformulieren, Förmlich, Kürzen | Ollama + Modell herunterladen |
+| LanguageTool | Grammatik und Zeichensetzung nach Regeln, schnell | Java + Server starten |
+| Sprachmodell (Ollama) | versteht den Satz: korrigiert, formuliert um, kürzt | Ollama + Modell herunterladen |
+| Windows-Rechtschreibprüfung | nur ob ein Wort existiert | keiner, ist in Windows enthalten |
+
+Die Windows-Prüfung allein stösst schnell an ihre Grenze: an `Halo dass ist ein tEst.` findet
+sie nichts, weil jedes einzelne Wort existiert. Wer solche Sätze korrigiert haben will, braucht
+LanguageTool oder ein Sprachmodell.
 
 Welche Engine geantwortet hat, steht in der Statuszeile des Popups.
 
@@ -65,13 +69,14 @@ java -cp "languagetool-server.jar;libs/*" org.languagetool.server.HTTPServer --p
 
 Details und ein Autostart-Skript: [docs/SETUP-LANGUAGETOOL.md](docs/SETUP-LANGUAGETOOL.md)
 
-### 2. Optional: Sprachmodell für Umformulieren, Förmlich und Kürzen
+### 2. Optional: Sprachmodell fürs Umformulieren – und für bessere Korrekturen
 
 ```powershell
 # Ollama von ollama.com installieren, dann einmalig:
-ollama pull qwen2.5:3b-instruct-q4_K_M
+ollama pull qwen2.5:3b
 ```
 
+Der Name muss nicht stimmen: ist ein anderes Modell installiert, wird es automatisch benutzt.
 Mehr dazu, inklusive Modellvergleich und llama.cpp: [docs/SETUP-OLLAMA.md](docs/SETUP-OLLAMA.md)
 
 ### 3. AutoCorrect bauen und starten
@@ -289,7 +294,7 @@ Weitere bewusste Entscheidungen sind in [docs/BUILD.md](docs/BUILD.md#entscheidu
   "preferredVariants": "de-CH,en-US",
   "interfaceLanguage": "auto",
   "llmEndpoint": "http://localhost:11434/v1",
-  "llmModel": "qwen2.5:3b-instruct-q4_K_M",
+  "llmModel": "qwen2.5:3b",
   "logLevel": "Warning",
   "maxInputLength": 5000,
   "clipboardWaitMilliseconds": 100,

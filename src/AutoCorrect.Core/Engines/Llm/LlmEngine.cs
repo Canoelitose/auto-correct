@@ -19,10 +19,19 @@ namespace AutoCorrect.Core.Engines.Llm;
 public sealed class LlmEngine : ITextEngine
 {
     public const string DefaultEndpoint = "http://localhost:11434/v1";
-    public const string DefaultModel = "qwen2.5:3b-instruct-q4_K_M";
+
+    /// <summary>
+    /// Short tag on purpose. "qwen2.5:3b-instruct-q4_K_M" names the same weights but has to be
+    /// typed exactly, and getting it slightly wrong produced a "model not loaded" error next to
+    /// a perfectly good installation.
+    /// </summary>
+    public const string DefaultModel = "qwen2.5:3b";
 
     /// <summary>A model that is not loaded yet needs a while for the first token.</summary>
     private const int FirstTokenTimeoutSeconds = 120;
+
+    /// <summary>Timeout for the two cheap calls: the availability probe and the model list.</summary>
+    private const int ProbeTimeoutSeconds = 5;
 
     private static readonly TimeSpan UnavailableFor = TimeSpan.FromSeconds(30);
 
@@ -31,6 +40,13 @@ public sealed class LlmEngine : ITextEngine
     private readonly ResultCache? _cache;
 
     private DateTimeOffset _unavailableUntil = DateTimeOffset.MinValue;
+
+    /// <summary>
+    /// What the configured name resolved to on this server, so the model list is fetched once
+    /// rather than before every request.
+    /// </summary>
+    private string? _resolvedFor;
+    private string? _resolvedModel;
 
     /// <param name="cache">Optional. Null disables caching entirely.</param>
     public LlmEngine(HttpClient http, Func<AppSettings> settingsProvider, ResultCache? cache = null)
@@ -42,15 +58,20 @@ public sealed class LlmEngine : ITextEngine
 
     public string Name => UiText.EngineLlmName;
 
-    public bool SupportsMode(ProcessingMode mode) =>
-        mode is ProcessingMode.Rephrase or ProcessingMode.Formal or ProcessingMode.Shorten;
+    /// <summary>
+    /// Every mode, correcting included. A spell checker only knows whether a word exists, so
+    /// "Halo dass ist ein tEst." passes it untouched - every word in it is real. Catching that
+    /// needs grammar in context, which is what the model is for. LanguageTool is still tried
+    /// first and is both faster and more predictable when it runs.
+    /// </summary>
+    public bool SupportsMode(ProcessingMode mode) => true;
 
     public async Task<bool> IsAvailableAsync(CancellationToken ct)
     {
         try
         {
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            timeout.CancelAfter(TimeSpan.FromSeconds(5));
+            timeout.CancelAfter(TimeSpan.FromSeconds(ProbeTimeoutSeconds));
 
             using var response = await _http.GetAsync(ModelsUrl(_settingsProvider()), timeout.Token)
                 .ConfigureAwait(false);
@@ -87,7 +108,7 @@ public sealed class LlmEngine : ITextEngine
             yield break;
         }
 
-        var model = ModelOf(_settingsProvider());
+        var model = await ResolveModelAsync(ct).ConfigureAwait(false);
 
         // A repeated request is answered from the database instead of costing another
         // generation. The whole answer arrives in one piece, which is exactly what the user
@@ -100,7 +121,7 @@ public sealed class LlmEngine : ITextEngine
             yield break;
         }
 
-        var session = await OpenAsync(input, mode, ct).ConfigureAwait(false);
+        var session = await OpenAsync(input, mode, model, ct).ConfigureAwait(false);
         var filter = new ResponseFilter(input);
         var complete = new StringBuilder();
         var finished = false;
@@ -177,7 +198,11 @@ public sealed class LlmEngine : ITextEngine
     }
 
     /// <summary>Sends the request and returns the open stream, or throws when nothing answers.</summary>
-    private async Task<StreamSession> OpenAsync(string input, ProcessingMode mode, CancellationToken ct)
+    private async Task<StreamSession> OpenAsync(
+        string input,
+        ProcessingMode mode,
+        string model,
+        CancellationToken ct)
     {
         var settings = _settingsProvider();
 
@@ -188,7 +213,7 @@ public sealed class LlmEngine : ITextEngine
 
         var request = new ChatRequest
         {
-            Model = ModelOf(settings),
+            Model = model,
             Stream = true,
             MaxTokens = 512,
             Temperature = 0.3,
@@ -225,11 +250,15 @@ public sealed class LlmEngine : ITextEngine
 
                 Log.Warn($"The model endpoint answered with status {status}.");
 
-                // A missing model is the common mistake and deserves its own message.
-                throw new EngineUnavailableException(
-                    status == 404 || body.Contains("model", StringComparison.OrdinalIgnoreCase)
-                        ? UiText.LlmModelMissing(request.Model)
-                        : UiText.LlmUnavailable);
+                // A missing model is the common mistake and deserves its own message. By this
+                // point the name has already been checked against what is installed, so the
+                // message can say whether anything usable is there at all.
+                if (status == 404 || body.Contains("model", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new EngineUnavailableException(UiText.LlmModelMissing(request.Model));
+                }
+
+                throw new EngineUnavailableException(UiText.LlmUnavailable);
             }
 
             var stream = await response.Content.ReadAsStreamAsync(timeout.Token).ConfigureAwait(false);
@@ -273,6 +302,97 @@ public sealed class LlmEngine : ITextEngine
             // A malformed chunk is not worth aborting a running answer for.
             return null;
         }
+    }
+
+    /// <summary>
+    /// Decides which model this request actually goes to. The configured name is used as it is
+    /// whenever the server has it; otherwise whatever usable model is installed is taken
+    /// instead, because failing next to a working installation helps nobody.
+    /// </summary>
+    private async Task<string> ResolveModelAsync(CancellationToken ct)
+    {
+        // Checked here and not only in OpenAsync: without it a server that is known to be down
+        // would still be asked for its model list before every single correction, and that
+        // wasted attempt is exactly what makes the fallback feel slow.
+        if (DateTimeOffset.UtcNow < _unavailableUntil)
+        {
+            throw new EngineUnavailableException(UiText.LlmUnavailable);
+        }
+
+        var configured = ModelOf(_settingsProvider());
+
+        if (string.Equals(_resolvedFor, configured, StringComparison.Ordinal) && _resolvedModel is not null)
+        {
+            return _resolvedModel;
+        }
+
+        var installed = await ListModelsAsync(ct).ConfigureAwait(false);
+
+        // The list could not be read at all - the server is probably not running. Send the
+        // configured name and let the request produce the real error, which also arms the
+        // negative cache above.
+        if (installed is null)
+        {
+            return configured;
+        }
+
+        var chosen = ModelCatalogue.Choose(configured, installed);
+        if (chosen is null)
+        {
+            // Nothing usable is installed. Naming the configured model in the error is right:
+            // that is the one the pull command should fetch.
+            throw new EngineUnavailableException(UiText.LlmModelMissing(configured));
+        }
+
+        if (!string.Equals(chosen, configured, StringComparison.OrdinalIgnoreCase))
+        {
+            Log.Info($"Model '{configured}' is not installed; using '{chosen}' instead.");
+        }
+
+        _resolvedFor = configured;
+        _resolvedModel = chosen;
+        return chosen;
+    }
+
+    /// <summary>Names of the installed models, or null when the list could not be read.</summary>
+    private async Task<IReadOnlyList<string>?> ListModelsAsync(CancellationToken ct)
+    {
+        try
+        {
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeout.CancelAfter(TimeSpan.FromSeconds(ProbeTimeoutSeconds));
+
+            using var response = await _http.GetAsync(ModelsUrl(_settingsProvider()), timeout.Token)
+                .ConfigureAwait(false);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return null;
+            }
+
+            var body = await response.Content.ReadAsStringAsync(timeout.Token).ConfigureAwait(false);
+            var list = JsonSerializer.Deserialize(body, ChatJsonContext.Default.ModelList);
+
+            return list?.Data?.Select(m => m.Id).Where(id => !string.IsNullOrWhiteSpace(id)).ToList()
+                   ?? (IReadOnlyList<string>)[];
+        }
+        catch (Exception ex) when (ex is HttpRequestException or UriFormatException or JsonException)
+        {
+            Log.Warn("The list of installed models could not be read.", ex);
+            return null;
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            Log.Warn("The list of installed models timed out.");
+            return null;
+        }
+    }
+
+    /// <summary>Forgets a resolved model, so a changed setting takes effect at once.</summary>
+    internal void ResetResolvedModel()
+    {
+        _resolvedFor = null;
+        _resolvedModel = null;
     }
 
     internal static string ModelOf(AppSettings settings) =>
@@ -367,9 +487,23 @@ internal sealed class ChatDelta
     public string? Content { get; set; }
 }
 
+/// <summary>Answer of GET /v1/models.</summary>
+internal sealed class ModelList
+{
+    [JsonPropertyName("data")]
+    public List<ModelEntry>? Data { get; set; }
+}
+
+internal sealed class ModelEntry
+{
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = "";
+}
+
 [JsonSourceGenerationOptions(DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
 [JsonSerializable(typeof(ChatRequest))]
 [JsonSerializable(typeof(ChatChunk))]
+[JsonSerializable(typeof(ModelList))]
 internal sealed partial class ChatJsonContext : JsonSerializerContext
 {
 }

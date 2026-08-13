@@ -12,7 +12,7 @@ Automatisiert ist alles, was ohne echtes Modell prüfbar ist, und läuft bei jed
 Der Integrationsteil braucht ein Modell und läuft deshalb nicht im CI:
 
 ```powershell
-ollama pull qwen2.5:3b-instruct-q4_K_M
+ollama pull qwen2.5:3b
 $env:AUTOCORRECT_LLM_ENDPOINT = 'http://localhost:11434/v1'
 dotnet run --project tests/AutoCorrect.Core.Tests
 ```
@@ -22,20 +22,21 @@ echten Fremdanwendungen sitzen muss.
 
 ## Vorbereitung
 
-- [ ] Ollama installiert, `ollama list` zeigt `qwen2.5:3b-instruct-q4_K_M`
+- [ ] Ollama installiert, `ollama list` zeigt mindestens ein Modell
 - [ ] AutoCorrect läuft, Tray-Icon sichtbar
 - [ ] Zwischenspeicher geleert (Einstellungen → *Zwischenspeicher leeren*)
 
-## 1 Die drei neuen Modi
+## 1 Die neuen Modi und die bessere Korrektur
 
 | # | Schritt | Erwartet |
 |---|---|---|
+| 1.0 | `Halo dass ist ein tEst.` markieren, *Korrigieren* (Ollama läuft, LanguageTool nicht) | `Hallo, das ist ein Test.` – die Windows-Prüfung allein findet daran nichts |
 | 1.1 | Satz markieren, `Win + Leertaste`, im Popup auf *Umformulieren* | Text erscheint **wachsend**, nicht auf einen Schlag |
 | 1.2 | Statuszeile während der Verarbeitung | `Sprachmodell · Umformulieren · Wird verarbeitet …` |
 | 1.3 | Ergebnis mit `Enter` übernehmen | umformulierter Text steht in der Ursprungsanwendung |
 | 1.4 | *Förmlicher* auf eine saloppe Nachricht | höflichere Fassung, gleicher Inhalt |
 | 1.5 | *Kürzer* auf einen langen Absatz | deutlich kürzer, Kernaussage bleibt |
-| 1.6 | *Korrigieren* nach den drei Modi | weiterhin sofort da, Statuszeile nennt `LanguageTool` oder `Windows` |
+| 1.6 | *Korrigieren* mit laufendem LanguageTool | sofort da, Statuszeile nennt `LanguageTool` – nicht das Modell |
 | 1.7 | Englischen Satz umformulieren | Antwort bleibt englisch |
 | 1.8 | Deutschen Satz umformulieren | kein `ß`, Schweizer Schreibung |
 | 1.9 | `Ctrl + Alt + R` auf markiertem Text | Popup öffnet direkt im Modus *Umformulieren* |
@@ -70,10 +71,12 @@ Anführungszeichen. Nichts davon darf im Dokument landen.
 
 | # | Schritt | Erwartet |
 |---|---|---|
-| 4.1 | Ollama beenden (`Ollama` im Task-Manager), *Umformulieren* | Meldung nennt `ollama pull qwen2.5:3b-instruct-q4_K_M` |
+| 4.1 | Ollama beenden (`Ollama` im Task-Manager), *Umformulieren* | Meldung nennt `ollama pull qwen2.5:3b` |
 | 4.2 | direkt danach nochmals *Umformulieren* | Meldung kommt sofort, kein erneutes Warten auf das Netz |
 | 4.3 | *Korrigieren* bei beendetem Ollama | funktioniert unverändert |
-| 4.4 | In den Einstellungen einen falschen Modellnamen eintragen | Meldung nennt genau diesen Namen und den `ollama pull`-Befehl |
+| 4.4 | In den Einstellungen einen falschen Modellnamen eintragen | funktioniert trotzdem: das installierte Modell wird benutzt |
+| 4.4b | Protokoll danach ansehen | Zeile „Model '…' is not installed; using '…' instead" |
+| 4.4c | Alle Modelle entfernen (`ollama rm …`), *Umformulieren* | Meldung „Es ist kein Sprachmodell installiert" mit `ollama pull` |
 | 4.5 | Adresse des Sprachmodells auf `keine-adresse` setzen, speichern | Dialog meldet die ungültige Adresse, speichert nicht |
 | 4.6 | Ollama starten, ohne das Modell zu laden, dann *Umformulieren* | dauert beim ersten Mal spürbar, kommt dann durch |
 | 4.7 | Sehr langen Text (mehrere Absätze) umformulieren | vollständige Antwort, kein Abbruch nach zwei Minuten |

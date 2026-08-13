@@ -10,16 +10,32 @@ public static class LlmEngineTests
 {
     public static void Register(TestRunner runner)
     {
-        runner.Add("LLM: handles the rewriting modes but not correcting", () =>
+        runner.Add("LLM: handles every mode, correcting included", () =>
         {
             using var http = new HttpClient();
             var engine = new LlmEngine(http, () => new AppSettings());
 
-            // Spelling stays with LanguageTool and the Windows checker; a 3B model is worse at it.
-            Assert.False(engine.SupportsMode(ProcessingMode.Correct));
+            // Correcting needs grammar in context: a spell checker passes "Halo dass ist ein
+            // tEst." untouched because every word in it exists.
+            Assert.True(engine.SupportsMode(ProcessingMode.Correct));
             Assert.True(engine.SupportsMode(ProcessingMode.Rephrase));
             Assert.True(engine.SupportsMode(ProcessingMode.Formal));
             Assert.True(engine.SupportsMode(ProcessingMode.Shorten));
+        });
+
+        runner.Add("LLM: correcting is told not to rewrite the text", async () =>
+        {
+            using var server = FakeLlmServer.Streaming("Hallo, das ist ein Test.");
+            var settings = new AppSettings { LlmEndpoint = server.Endpoint };
+            using var http = new HttpClient();
+            var engine = new LlmEngine(http, () => settings);
+
+            await DrainAsync(engine, "Halo dass ist ein tEst.", ProcessingMode.Correct);
+
+            var body = server.LastRequestBody!;
+            Assert.Contains("Korrigiere", body);
+            // Without this the model returns a nicer sentence instead of the corrected one.
+            Assert.Contains("keine andere Wortwahl", body);
         });
 
         runner.Add("LLM: streams the tokens one by one", async () =>
@@ -104,6 +120,7 @@ public static class LlmEngineTests
         runner.Add("LLM: an empty model name falls back to the default", async () =>
         {
             using var server = FakeLlmServer.Streaming("ok");
+            server.InstalledModels = [LlmEngine.DefaultModel];
 
             var settings = new AppSettings { LlmEndpoint = server.Endpoint, LlmModel = "  " };
             using var http = new HttpClient();
@@ -113,19 +130,89 @@ public static class LlmEngineTests
             Assert.Contains($"\"model\":\"{LlmEngine.DefaultModel}\"", server.LastRequestBody!);
         });
 
-        runner.Add("LLM: a missing model is reported with the pull command", async () =>
+        runner.Add("LLM: with nothing installed the pull command is shown", async () =>
         {
             using var server = new FakeLlmServer(_ =>
-                FakeLlmServer.ChatReply.Error(404, """{"error":"model 'test-model' not found"}"""));
+                FakeLlmServer.ChatReply.Error(404, """{"error":"model not found"}"""))
+            {
+                InstalledModels = [],
+            };
 
-            var settings = new AppSettings { LlmEndpoint = server.Endpoint, LlmModel = "test-model" };
+            var settings = new AppSettings { LlmEndpoint = server.Endpoint, LlmModel = "qwen2.5:3b" };
             using var http = new HttpClient();
             var engine = new LlmEngine(http, () => settings);
 
             var ex = await Assert.ThrowsAsync<EngineUnavailableException>(
                 () => DrainAsync(engine, "Test", ProcessingMode.Rephrase));
 
-            Assert.Contains("ollama pull test-model", ex.Message);
+            Assert.Contains("ollama pull qwen2.5:3b", ex.Message);
+            // The request must not even be attempted when nothing can answer it.
+            Assert.Equal(0, server.ChatRequestCount);
+        });
+
+        // ------------------------------------------------------------ choosing a model
+
+        runner.Add("LLM: an installed model is used even under a different name", async () =>
+        {
+            // The reported problem: a model is sitting right there, but the configured name is
+            // a slightly different tag, and the answer was "model not loaded".
+            using var server = FakeLlmServer.Streaming("Antwort");
+            server.InstalledModels = ["llama3.2:3b"];
+
+            var settings = new AppSettings
+            {
+                LlmEndpoint = server.Endpoint,
+                LlmModel = "qwen2.5:3b-instruct-q4_K_M",
+            };
+
+            using var http = new HttpClient();
+            var engine = new LlmEngine(http, () => settings);
+            await DrainAsync(engine, "Test", ProcessingMode.Rephrase);
+
+            Assert.Contains("\"model\":\"llama3.2:3b\"", server.LastRequestBody!);
+        });
+
+        runner.Add("LLM: the configured model wins when it is installed", async () =>
+        {
+            using var server = FakeLlmServer.Streaming("Antwort");
+            server.InstalledModels = ["llama3.2:1b", "qwen2.5:7b", "qwen2.5:3b"];
+
+            var settings = new AppSettings { LlmEndpoint = server.Endpoint, LlmModel = "qwen2.5:7b" };
+            using var http = new HttpClient();
+            var engine = new LlmEngine(http, () => settings);
+            await DrainAsync(engine, "Test", ProcessingMode.Rephrase);
+
+            Assert.Contains("\"model\":\"qwen2.5:7b\"", server.LastRequestBody!);
+        });
+
+        runner.Add("LLM: a differently tagged variant of the configured model counts as a match", async () =>
+        {
+            using var server = FakeLlmServer.Streaming("Antwort");
+            server.InstalledModels = ["qwen2.5:3b-instruct-q4_K_M"];
+
+            var settings = new AppSettings { LlmEndpoint = server.Endpoint, LlmModel = "qwen2.5:3b" };
+            using var http = new HttpClient();
+            var engine = new LlmEngine(http, () => settings);
+            await DrainAsync(engine, "Test", ProcessingMode.Rephrase);
+
+            Assert.Contains("\"model\":\"qwen2.5:3b-instruct-q4_K_M\"", server.LastRequestBody!);
+        });
+
+        runner.Add("LLM: the model list is read once, not before every request", async () =>
+        {
+            using var server = FakeLlmServer.Streaming("Antwort");
+            server.InstalledModels = ["llama3.2:3b"];
+
+            var settings = new AppSettings { LlmEndpoint = server.Endpoint, LlmModel = "nicht-da" };
+            using var http = new HttpClient();
+            var engine = new LlmEngine(http, () => settings);
+
+            await DrainAsync(engine, "Eins", ProcessingMode.Rephrase);
+            await DrainAsync(engine, "Zwei", ProcessingMode.Rephrase);
+            await DrainAsync(engine, "Drei", ProcessingMode.Rephrase);
+
+            Assert.Equal(1, server.ModelListRequestCount);
+            Assert.Equal(3, server.ChatRequestCount);
         });
 
         runner.Add("LLM: an unreachable endpoint explains how to install Ollama", async () =>
@@ -158,15 +245,6 @@ public static class LlmEngineTests
             Assert.True(
                 second.ElapsedMilliseconds <= 5,
                 $"the second attempt still went to the network ({second.ElapsedMilliseconds} ms)");
-        });
-
-        runner.Add("LLM: correcting is refused", async () =>
-        {
-            using var http = new HttpClient();
-            var engine = new LlmEngine(http, () => new AppSettings());
-
-            await Assert.ThrowsAsync<NotSupportedException>(
-                () => DrainAsync(engine, "Test", ProcessingMode.Correct));
         });
 
         runner.Add("LLM: blank input is returned without a request", async () =>
@@ -232,6 +310,28 @@ public static class LlmEngineTests
 
         // ------------------------------------------------------------ caching
 
+        runner.Add("LLM: two names for the same model share a cache entry", async () =>
+        {
+            // A renamed tag must not throw the cache away: the answer came from the same model.
+            using var server = FakeLlmServer.Streaming("Gleiche Antwort.");
+            server.InstalledModels = ["qwen2.5:3b"];
+
+            using var temp = new TempCacheFile();
+            using var cache = new ResultCache(temp.Path);
+
+            var settings = new AppSettings { LlmEndpoint = server.Endpoint, LlmModel = "qwen2.5:3b" };
+            using var http = new HttpClient();
+            var engine = new LlmEngine(http, () => settings, cache);
+
+            await DrainAsync(engine, "Ein Satz.", ProcessingMode.Shorten);
+
+            settings.LlmModel = "qwen2.5:3b-instruct-q4_K_M";
+            engine.ResetResolvedModel();
+            await DrainAsync(engine, "Ein Satz.", ProcessingMode.Shorten);
+
+            Assert.Equal(1, server.ChatRequestCount);
+        });
+
         runner.Add("LLM: a repeated request is answered from the cache", async () =>
         {
             using var server = FakeLlmServer.Streaming("Kurz ", "und ", "knapp.");
@@ -253,6 +353,10 @@ public static class LlmEngineTests
         runner.Add("LLM: mode and model are part of the cache key", async () =>
         {
             using var server = FakeLlmServer.Streaming("Antwort");
+            // Both have to exist on the server: the key uses the model that really answered, so
+            // two names resolving to the same model would share a cache entry - correctly.
+            server.InstalledModels = ["model-a", "model-b"];
+
             using var temp = new TempCacheFile();
             using var cache = new ResultCache(temp.Path);
 
@@ -267,6 +371,7 @@ public static class LlmEngineTests
             settings.LlmModel = "model-b";
             await DrainAsync(engine, "Ein Satz.", ProcessingMode.Shorten);
             Assert.Equal(3, server.ChatRequestCount);
+            Assert.Contains("\"model\":\"model-b\"", server.LastRequestBody!);
         });
 
         runner.Add("LLM: a cancelled answer is not cached", async () =>

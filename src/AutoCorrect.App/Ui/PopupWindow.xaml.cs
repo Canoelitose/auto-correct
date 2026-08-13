@@ -327,7 +327,7 @@ public partial class PopupWindow : Window
     /// </summary>
     private void ShowLoadingNoteIfOverdue()
     {
-        if (_produced || _loadingNoteShown || !IsModelMode(_mode))
+        if (_produced || _loadingNoteShown)
         {
             return;
         }
@@ -340,10 +340,6 @@ public partial class PopupWindow : Window
         _loadingNoteShown = true;
         SetStatus($"{_engine.Name} · {UiText.ModeLabel(_mode)} · {UiText.StatusModelLoading}");
     }
-
-    /// <summary>The modes a language model handles; only those have a loading wait.</summary>
-    private static bool IsModelMode(ProcessingMode mode) =>
-        mode is ProcessingMode.Rephrase or ProcessingMode.Formal or ProcessingMode.Shorten;
 
     private void FlushPending()
     {
@@ -518,6 +514,10 @@ public partial class PopupWindow : Window
         ErrorText.Text = message;
         ErrorPanel.Visibility = Visibility.Visible;
         SetStatus(string.Empty);
+
+        // The label still named the engine of the previous run, so a model error appeared under
+        // the heading "Windows" - which reads as if the wrong component had failed.
+        EngineLabel.Text = string.Empty;
     }
 
     private void HideError()

@@ -43,6 +43,11 @@ internal sealed class FakeLlmServer : IDisposable
     /// <summary>Set to false to make the availability probe fail.</summary>
     public bool ModelsAvailable { get; set; } = true;
 
+    /// <summary>What GET /v1/models reports as installed.</summary>
+    public IReadOnlyList<string> InstalledModels { get; set; } = ["test-model"];
+
+    public int ModelListRequestCount { get; private set; }
+
     /// <summary>Blocks the response until the test releases it, to exercise timeouts.</summary>
     public ManualResetEventSlim? HoldResponse { get; set; }
 
@@ -94,7 +99,11 @@ internal sealed class FakeLlmServer : IDisposable
                 return;
             }
 
-            await WriteJsonAsync(context, 200, """{"object":"list","data":[{"id":"test-model"}]}""");
+            var entries = string.Join(",", InstalledModels.Select(m =>
+                $"{{\"id\":{System.Text.Json.JsonSerializer.Serialize(m)}}}"));
+
+            await WriteJsonAsync(context, 200, $"{{\"object\":\"list\",\"data\":[{entries}]}}");
+            ModelListRequestCount++;
             return;
         }
 

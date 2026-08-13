@@ -81,10 +81,13 @@ public static class SpellCheckTests
 
         runner.Add("Spell check: the fallback chain uses it when LanguageTool is missing", async () =>
         {
-            // The situation a fresh download lands in: no server anywhere.
+            // The situation a fresh download lands in: no server anywhere. Both addresses point
+            // at a dead port on purpose, so the test keeps its meaning on a machine that happens
+            // to have Ollama running.
             var settings = new AppSettings
             {
                 LanguageToolEndpoint = "http://127.0.0.1:1/v2/check",
+                LlmEndpoint = "http://127.0.0.1:1/v1",
                 Language = "en-US",
                 RequestTimeoutSeconds = 3,
             };

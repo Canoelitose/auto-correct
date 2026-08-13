@@ -21,13 +21,20 @@ internal static class EngineFactory
         ArgumentNullException.ThrowIfNull(http);
         ArgumentNullException.ThrowIfNull(settings);
 
-        // Order matters: LanguageTool also finds grammar problems and wins when it is running.
-        // The Windows spell checker needs no installation at all and catches the common case of
-        // a fresh download without any server.
+        // Order matters, and it is the order of how good the correction is:
+        //
+        //   LanguageTool  knows German grammar rules, is fast and predictable - first choice.
+        //   Sprachmodell  understands the sentence, so it catches what a rule set misses.
+        //   Windows       only knows whether a word exists. "Halo dass ist ein tEst." passes it
+        //                 untouched, because every word in it is real. Last resort, but it needs
+        //                 no installation at all and so is never missing.
+        //
+        // The router moves on to the next one only when an engine reports itself unavailable
+        // before producing anything, so a running LanguageTool always answers on its own.
         return new EngineRouter(
             new LanguageToolEngine(http, settings),
-            new WindowsSpellCheckEngine(settings),
-            new LlmEngine(http, settings, cache));
+            new LlmEngine(http, settings, cache),
+            new WindowsSpellCheckEngine(settings));
     }
 
     /// <summary>

@@ -1,18 +1,28 @@
 # Lokales Sprachmodell einrichten (Phase 2)
 
-Für *Korrigieren* brauchst du das hier **nicht** – das erledigen die Windows-Rechtschreibprüfung
-und LanguageTool. Das Sprachmodell ist für die drei Modi zuständig, die den Text wirklich
-umschreiben:
+Das Sprachmodell ist für die drei Modi zuständig, die den Text umschreiben – und es verbessert
+auch das Korrigieren deutlich:
 
 | Modus | Was er macht |
 |---|---|
+| Korrigieren | Rechtschreibung, Grammatik, Gross-/Kleinschreibung, Zeichensetzung |
 | Umformulieren | gleicher Inhalt, natürlichere Formulierung |
 | Förmlich | höflicher und formeller, für Mails und Briefe |
 | Kürzen | deutlich kürzer, ohne Inhalt zu verlieren |
 
-Ohne Modell bleiben die drei Schaltflächen im Popup anklickbar, melden aber, dass kein Modell
-läuft, und sagen, wie man es nachholt. Alles läuft auf deinem Rechner, es gehen weiterhin keine
-Daten an externe Dienste.
+**Warum Korrigieren ein Modell braucht.** Nimm den Satz `Halo dass ist ein tEst.` Die
+Rechtschreibprüfung von Windows findet daran nichts: `Halo` ist ein deutsches Wort (die
+Lichterscheinung), `dass` ist eine Konjunktion, `tEst` ist `Test` mit einem Grossbuchstaben in
+der Mitte. Jedes Wort für sich existiert. Erst wer den Satz *versteht*, sieht die Fehler –
+und genau das kann ein Sprachmodell. Die Reihenfolge ist deshalb:
+
+| Engine | Kann | Wann sie dran ist |
+|---|---|---|
+| LanguageTool | Grammatikregeln, schnell und vorhersagbar | wenn der Server läuft |
+| Sprachmodell | versteht den Satz, findet auch, was keine Regel abdeckt | wenn Ollama läuft |
+| Windows | nur ob ein Wort existiert | immer, ganz ohne Installation |
+
+Alles läuft auf deinem Rechner, es gehen weiterhin keine Daten an externe Dienste.
 
 ---
 
@@ -26,14 +36,19 @@ danach als Dienst im Hintergrund und hört auf `http://localhost:11434`.
 ### 2. Modell holen
 
 ```powershell
-ollama pull qwen2.5:3b-instruct-q4_K_M
+ollama pull qwen2.5:3b
 ```
 
 Das sind knapp 2 GB, einmalig. Danach:
 
 ```powershell
-ollama run qwen2.5:3b-instruct-q4_K_M "Formuliere um: Das Meeting ist am Montag."
+ollama run qwen2.5:3b "Formuliere um: Das Meeting ist am Montag."
 ```
+
+**Der Name muss nicht stimmen.** Hast du schon ein anderes Modell installiert, benutzt
+AutoCorrect es einfach – es fragt den Server, was da ist, und nimmt das passendste (bevorzugt
+ein kleines, weil es schneller antwortet). Nur wenn gar nichts installiert ist, kommt die
+Meldung mit dem `ollama pull`-Befehl.
 
 Kommt eine sinnvolle Antwort, ist alles bereit. AutoCorrect braucht keine weitere Einstellung –
 Adresse und Modellname stehen bereits als Standard drin.
@@ -54,16 +69,17 @@ Ergebnis auf Deutsch brauchbar ist.
 
 | Modell | Grösse | Braucht | Taugt für |
 |---|---|---|---|
-| `qwen2.5:3b-instruct-q4_K_M` | ca. 2 GB | ca. 3 GB RAM | Standard. Schnell genug auf einer CPU, Deutsch solide. |
-| `qwen2.5:7b-instruct-q4_K_M` | ca. 4.7 GB | ca. 6 GB RAM | spürbar besseres Deutsch, ungefähr doppelte Wartezeit |
-| `llama3.1:8b-instruct-q4_K_M` | ca. 4.9 GB | ca. 6 GB RAM | Alternative, Englisch etwas stärker als Deutsch |
-| `qwen2.5:1.5b-instruct-q4_K_M` | ca. 1 GB | ca. 2 GB RAM | für schwache Rechner, Qualität merklich schlechter |
+| `qwen2.5:3b` | ca. 2 GB | ca. 3 GB RAM | Standard. Schnell genug auf einer CPU, Deutsch solide. |
+| `qwen2.5:1.5b` | ca. 1 GB | ca. 2 GB RAM | für schwache Rechner, sehr schnell, Qualität etwas schlechter |
+| `llama3.2:1b` | ca. 1.3 GB | ca. 2 GB RAM | am schnellsten, reicht fürs Korrigieren, schwächer beim Umformulieren |
+| `qwen2.5:7b` | ca. 4.7 GB | ca. 6 GB RAM | spürbar besseres Deutsch, ungefähr doppelte Wartezeit |
+| `llama3.1:8b` | ca. 4.9 GB | ca. 6 GB RAM | Alternative, Englisch etwas stärker als Deutsch |
 
 Faustregel: mit Grafikkarte (ab 6 GB VRAM) das 7B-Modell, ohne Grafikkarte das 3B-Modell.
 Ollama nutzt eine vorhandene NVIDIA- oder AMD-Karte von selbst.
 
-Nach dem Wechsel den Namen in den Einstellungen eintragen – exakt so, wie `ollama list` ihn
-anzeigt.
+Nach dem Wechsel kannst du den Namen in den Einstellungen eintragen – musst du aber nicht:
+ist der eingetragene Name nicht installiert, wird automatisch ein vorhandenes Modell benutzt.
 
 ---
 
@@ -78,7 +94,7 @@ vorwärmen:
 
 ```powershell
 # Aufgabenplanung → Aufgabe erstellen → Bei Anmeldung
-ollama run qwen2.5:3b-instruct-q4_K_M "warm" --keepalive 60m
+ollama run qwen2.5:3b "warm" --keepalive 60m
 ```
 
 `OLLAMA_KEEP_ALIVE=-1` als Umgebungsvariable hält das Modell dauerhaft geladen – bequem, kostet
@@ -130,7 +146,7 @@ lokalen Netz, nicht bei einem externen Dienst.
 | Meldung im Popup | Ursache | Abhilfe |
 |---|---|---|
 | *Das lokale Sprachmodell ist nicht erreichbar* | Ollama läuft nicht | `ollama serve`, oder Ollama neu starten |
-| *Das Modell "…" ist nicht geladen* | Name stimmt nicht | `ollama list` und den Namen exakt übernehmen |
+| *Es ist kein Sprachmodell installiert* | wirklich keines da | `ollama pull qwen2.5:3b` |
 | *Das Sprachmodell hat nicht rechtzeitig geantwortet* | Modell lädt noch | nochmals versuchen, das zweite Mal ist schnell |
 
 Prüfen, ob der Server wirklich antwortet:

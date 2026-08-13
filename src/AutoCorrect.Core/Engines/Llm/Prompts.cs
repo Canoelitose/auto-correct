@@ -16,6 +16,15 @@ public static class Prompts
         "Antworte in der Sprache des Eingabetexts. " +
         "Im Deutschen gilt Schweizer Rechtschreibung: ss statt ß.";
 
+    /// <summary>
+    /// Correcting is the one instruction that has to forbid rewriting. Left to itself a model
+    /// improves the wording as well, and the user asked for a correction, not a new text.
+    /// </summary>
+    public const string Correct =
+        "Korrigiere Rechtschreibung, Grammatik, Gross- und Kleinschreibung sowie Zeichensetzung " +
+        "im folgenden Text. Ändere sonst nichts: keine andere Wortwahl, keine andere Reihenfolge, " +
+        "kein anderer Stil. Ist der Text bereits korrekt, gib ihn unverändert zurück.";
+
     public const string Rephrase =
         "Formuliere den folgenden Text um. Gleicher Inhalt, natürlichere und klarere Formulierung.";
 
@@ -30,6 +39,7 @@ public static class Prompts
 
     public static string Instruction(ProcessingMode mode) => mode switch
     {
+        ProcessingMode.Correct => Correct,
         ProcessingMode.Rephrase => Rephrase,
         ProcessingMode.Formal => Formal,
         ProcessingMode.Shorten => Shorten,

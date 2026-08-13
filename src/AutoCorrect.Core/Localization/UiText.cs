@@ -166,10 +166,13 @@ public static class UiText
 
     public static string StatusWorking => T("Wird verarbeitet …", "Processing …");
 
-    /// <summary>Shown while a cold model is still loading, so the wait is explained.</summary>
+    /// <summary>
+    /// Shown when nothing has arrived for a few seconds. Worded as a likely cause, not as a
+    /// fact: which engine is answering is only known once it does.
+    /// </summary>
     public static string StatusModelLoading => T(
-        "Modell wird geladen, beim ersten Mal dauert das …",
-        "Loading the model, the first time takes a while …");
+        "Dauert länger als üblich – beim ersten Aufruf wird das Sprachmodell geladen",
+        "Taking longer than usual – the language model is loaded on the first call");
 
     public static string StatusDone => T("Fertig", "Done");
 
@@ -210,12 +213,12 @@ public static class UiText
 
     public static string LlmUnavailable => T(
         "Das lokale Sprachmodell ist nicht erreichbar.\n\n" +
-        "Ollama installieren und das Modell laden:\n" +
-        "ollama pull qwen2.5:3b-instruct-q4_K_M\n\n" +
+        "Ollama von ollama.com installieren, dann einmalig:\n" +
+        "ollama pull qwen2.5:3b\n\n" +
         "Ollama läuft danach im Hintergrund. Adresse in den Einstellungen prüfen.",
         "The local language model is not reachable.\n\n" +
-        "Install Ollama and pull the model:\n" +
-        "ollama pull qwen2.5:3b-instruct-q4_K_M\n\n" +
+        "Install Ollama from ollama.com, then once:\n" +
+        "ollama pull qwen2.5:3b\n\n" +
         "Ollama then runs in the background. Check the address in the settings.");
 
     public static string LlmTimeout => T(
@@ -225,8 +228,12 @@ public static class UiText
         "take a while – please try again.");
 
     public static string LlmModelMissing(string model) => T(
-        $"Das Modell \"{model}\" ist nicht geladen.\n\nMit diesem Befehl holen:\nollama pull {model}",
-        $"The model \"{model}\" is not loaded.\n\nGet it with:\nollama pull {model}");
+        $"Es ist kein Sprachmodell installiert.\n\nMit diesem Befehl holen (ca. 2 GB, einmalig):\n" +
+        $"ollama pull {model}\n\n" +
+        "Ein bereits installiertes Modell wird automatisch verwendet, der Name muss nicht stimmen.",
+        $"No language model is installed.\n\nGet one with this command (about 2 GB, once):\n" +
+        $"ollama pull {model}\n\n" +
+        "A model that is already installed is used automatically, the name does not have to match.");
 
     /// <summary>Shown in the status line next to "Windows" and "LanguageTool".</summary>
     public static string EngineLlmName => T("Sprachmodell", "Language model");
@@ -278,16 +285,18 @@ public static class UiText
     public static string SettingsLlmEndpoint => T("Adresse des Sprachmodells", "Language model address");
 
     public static string SettingsLlmEndpointHint => T(
-        "Standard: http://localhost:11434/v1 (Ollama). Wird nur für Umformulieren, Förmlich und " +
-        "Kürzen gebraucht; Korrigieren läuft ohne.",
-        "Default: http://localhost:11434/v1 (Ollama). Only needed for rephrasing, formal wording " +
-        "and shortening; correcting works without it.");
+        "Standard: http://localhost:11434/v1 (Ollama). Nötig für Umformulieren, Förmlicher und " +
+        "Kürzer; beim Korrigieren verbessert es das Ergebnis, wenn LanguageTool nicht läuft.",
+        "Default: http://localhost:11434/v1 (Ollama). Needed for rephrasing, formal wording and " +
+        "shortening; for correcting it improves the result when LanguageTool is not running.");
 
     public static string SettingsLlmModel => T("Modell", "Model");
 
     public static string SettingsLlmModelHint => T(
-        "Empfohlen: qwen2.5:3b-instruct-q4_K_M. Einmalig holen mit: ollama pull qwen2.5:3b-instruct-q4_K_M",
-        "Recommended: qwen2.5:3b-instruct-q4_K_M. Fetch it once with: ollama pull qwen2.5:3b-instruct-q4_K_M");
+        "Empfohlen: qwen2.5:3b (einmalig holen mit: ollama pull qwen2.5:3b). Ist dieses Modell " +
+        "nicht da, wird ein anderes installiertes automatisch benutzt.",
+        "Recommended: qwen2.5:3b (fetch it once with: ollama pull qwen2.5:3b). If that model is " +
+        "missing, another installed one is used automatically.");
 
     public static string SettingsClearCache => T("Zwischenspeicher leeren", "Clear cache");
 

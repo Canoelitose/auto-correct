@@ -40,7 +40,10 @@ public sealed class AppSettings
     /// <summary>Phase 2: OpenAI compatible base address (llama.cpp, Ollama, own API).</summary>
     public string LlmEndpoint { get; set; } = LlmEngine.DefaultEndpoint;
 
-    /// <summary>Phase 2: model name passed to the OpenAI compatible endpoint.</summary>
+    /// <summary>
+    /// Phase 2: model name passed to the OpenAI compatible endpoint. A name that is not
+    /// installed is not an error - the engine then uses whatever usable model it finds.
+    /// </summary>
     public string LlmModel { get; set; } = LlmEngine.DefaultModel;
 
     public LogLevel LogLevel { get; set; } = LogLevel.Warning;

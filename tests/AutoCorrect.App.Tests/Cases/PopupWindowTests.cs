@@ -122,21 +122,36 @@ public static class PopupWindowTests
             popup.Window.EndSession();
         });
 
-        runner.Add("Popup: correcting never claims a model is loading", async () =>
+        runner.Add("Popup: correcting explains a long wait as well", async () =>
         {
-            // Correcting does not go to a model at all; the note would simply be untrue.
+            // Correcting can reach the model too now, so the same explanation applies.
             var engine = new StubEngine("korrigiert") { DelayMs = 20_000 };
             using var popup = new PopupScope(engine);
             popup.Window.Warmup();
 
             popup.Window.StartSession("Eingabe", ProcessingMode.Correct, IntPtr.Zero);
 
-            await Task.Delay(6000);
+            await WaitUntil(
+                () => popup.Window.StatusLineForTests.Contains(UiText.StatusModelLoading, StringComparison.Ordinal),
+                8000);
+
+            popup.Window.EndSession();
+        });
+
+        runner.Add("Popup: a fast answer is never called slow", async () =>
+        {
+            // The note must only appear when the wait is real.
+            var engine = new StubEngine("sofort da");
+            using var popup = new PopupScope(engine);
+            popup.Window.Warmup();
+
+            popup.Window.StartSession("Eingabe", ProcessingMode.Correct, IntPtr.Zero);
+            await WaitUntil(() => popup.Window.ResultTextForTests.Length > 0, 5000);
+            await Task.Delay(600);
 
             Assert.False(
                 popup.Window.StatusLineForTests.Contains(UiText.StatusModelLoading, StringComparison.Ordinal),
-                $"the status claimed a model was loading: {popup.Window.StatusLineForTests}");
-            Assert.Contains(UiText.StatusWorking, popup.Window.StatusLineForTests);
+                $"an instant answer was reported as slow: {popup.Window.StatusLineForTests}");
 
             popup.Window.EndSession();
         });

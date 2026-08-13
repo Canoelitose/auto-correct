@@ -160,13 +160,16 @@ jobs:
 
             ## Optional: Sprachmodell zum Umformulieren
 
-            Für *Umformulieren*, *Förmlich* und *Kürzen* braucht es ein lokales Sprachmodell.
-            Ollama installieren, einmalig das Modell holen, fertig – AutoCorrect findet es von
-            selbst:
+Für *Umformulieren*, *Förmlicher* und *Kürzer* braucht es ein lokales Sprachmodell,
+            und auch *Korrigieren* wird damit deutlich besser. Ollama installieren, einmalig ein
+            Modell holen, fertig – AutoCorrect findet es von selbst:
 
             ```powershell
-            ollama pull qwen2.5:3b-instruct-q4_K_M
+            ollama pull qwen2.5:3b
             ```
+
+            Der Name muss nicht stimmen: ist bereits ein anderes Modell installiert, wird es
+            automatisch benutzt.
 
             Es läuft auf deinem Rechner, es gehen weiterhin keine Daten an externe Dienste.
             Anleitung inklusive Modellvergleich: [docs/SETUP-OLLAMA.md](https://github.com/${{ github.repository }}/blob/${{ env.TAG }}/docs/SETUP-OLLAMA.md)
