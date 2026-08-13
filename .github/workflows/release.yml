@@ -150,13 +150,17 @@ jobs:
 
             | Taste | Wirkung |
             |---|---|
-            | `Ctrl + Alt + Space` | Text markieren, Hotkey drücken, Popup mit der Korrektur erscheint |
+            | `Win + Leertaste` | Text markieren, Hotkey drücken, Popup mit der Korrektur erscheint |
             | `Enter` | Ergebnis übernehmen und einfügen |
             | `Esc` | abbrechen |
             | `Ctrl + C` | Ergebnis nur kopieren |
 
             ## Hinweise
 
+            - `Win + Leertaste` ist ab Werk der Hotkey. Windows benutzt die Kombination sonst
+              für den Tastaturlayout-Wechsel; AutoCorrect fängt sie über einen
+              Low-Level-Tastaturhaken ab, der Layout-Wechsel entfällt dadurch. In den
+              Einstellungen lässt sich jede andere Kombination wählen.
             - Die Exe ist nicht signiert. SmartScreen meldet sich beim ersten Start:
               *Weitere Informationen* → *Trotzdem ausführen*.
             - Anwendungen mit Administratorrechten sind für ein normal laufendes Tool
