@@ -22,7 +22,7 @@
         <StackPanel Grid.Row="0">
             <TextBlock Text="AutoCorrect" FontSize="20" FontWeight="SemiBold" />
             <TextBlock x:Name="VersionText" Foreground="#FF71717A" Margin="0,2,0,0" />
-            <TextBlock Text="Lokale Textkorrektur – die Verarbeitung verlässt das Gerät nicht."
+            <TextBlock x:Name="TaglineText"
                        TextWrapping="Wrap"
                        Margin="0,10,0,0" />
         </StackPanel>
@@ -30,13 +30,13 @@
         <ScrollViewer Grid.Row="1" Margin="0,14,0,0" VerticalScrollBarVisibility="Auto">
             <StackPanel>
                 <TextBlock x:Name="DetailsText" TextWrapping="Wrap" FontSize="12" Foreground="#FF3F3F46" />
-                <TextBlock Text="Hinweis"
+                <TextBlock x:Name="NoteHeader"
                            FontWeight="SemiBold"
                            Margin="0,14,0,4" />
-                <TextBlock TextWrapping="Wrap"
+                <TextBlock x:Name="NoteText"
+                           TextWrapping="Wrap"
                            FontSize="12"
-                           Foreground="#FF3F3F46"
-                           Text="Anwendungen, die als Administrator laufen, sind für AutoCorrect nicht lesbar (Windows-Sicherheitsgrenze UIPI). Dort bleibt die Auswahl leer." />
+                           Foreground="#FF3F3F46" />
             </StackPanel>
         </ScrollViewer>
 
@@ -45,7 +45,6 @@
                 HorizontalAlignment="Right"
                 Margin="0,16,0,0"
                 Padding="18,6"
-                Content="Schliessen"
                 IsDefault="True"
                 IsCancel="True" />
     </Grid>

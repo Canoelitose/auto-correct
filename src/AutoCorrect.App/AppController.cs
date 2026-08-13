@@ -29,7 +29,8 @@ public sealed class AppController : IDisposable
     private readonly SelectionCapture _capture = new();
     private readonly TextInjector _injector = new();
     private readonly ITextEngine _engine;
-    private readonly PopupWindow _popup;
+
+    private PopupWindow _popup;
 
     private AppSettings _settings;
     private ContextMenu? _trayMenu;
@@ -59,8 +60,9 @@ public sealed class AppController : IDisposable
         _tray.Activated += (_, _) => ShowSettings();
         _tray.MenuRequested += (_, _) => ShowTrayMenu();
 
-        _popup = new PopupWindow(_engine, _injector);
-        _popup.Warmup();
+        UiText.Language = UiText.Resolve(_settings.InterfaceLanguage);
+
+        _popup = CreatePopup();
 
         RegisterHotkeys(reportConflicts: true);
 
@@ -69,6 +71,13 @@ public sealed class AppController : IDisposable
         {
             AutoStartManager.SetEnabled(_settings.StartWithWindows);
         }
+    }
+
+    private PopupWindow CreatePopup()
+    {
+        var popup = new PopupWindow(_engine, _injector);
+        popup.Warmup();
+        return popup;
     }
 
     // ---------------------------------------------------------------- hotkeys
@@ -233,7 +242,7 @@ public sealed class AppController : IDisposable
         {
             item.IsChecked = !enabled;
             MessageBox.Show(
-                "Der Autostart-Eintrag konnte nicht geschrieben werden.",
+                UiText.AutostartFailed,
                 UiText.AppName,
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
@@ -264,12 +273,32 @@ public sealed class AppController : IDisposable
         _settingsWindow = window;
         try
         {
-            if (window.ShowDialog() == true)
+            var accepted = window.ShowDialog() == true;
+            var chosenLanguage = accepted
+                ? window.UpdatedSettings.InterfaceLanguage
+                : _settings.InterfaceLanguage;
+
+            // The dialog switches UiText.Language live for its preview, so it is reset here
+            // to whatever was actually saved.
+            UiText.Language = UiText.Resolve(chosenLanguage);
+
+            if (accepted)
             {
                 var updated = window.UpdatedSettings;
+                var languageChanged = !string.Equals(
+                    updated.InterfaceLanguage,
+                    _settings.InterfaceLanguage,
+                    StringComparison.OrdinalIgnoreCase);
+
                 SaveSettings(updated);
                 AutoStartManager.SetEnabled(updated.StartWithWindows);
                 RegisterHotkeys(reportConflicts: true);
+
+                if (languageChanged)
+                {
+                    // The popup is built once and reused, so it is rebuilt in the new language.
+                    ReplacePopup();
+                }
             }
         }
         finally
@@ -291,6 +320,15 @@ public sealed class AppController : IDisposable
         _aboutWindow.Show();
     }
 
+    private void ReplacePopup()
+    {
+        var old = _popup;
+        _popup = CreatePopup();
+
+        old.EndSession();
+        old.Close();
+    }
+
     private void SaveSettings(AppSettings settings)
     {
         _settings = settings;
@@ -303,7 +341,7 @@ public sealed class AppController : IDisposable
         {
             Log.Error("Settings could not be saved.", ex);
             MessageBox.Show(
-                $"Die Einstellungen konnten nicht gespeichert werden.\n\n{_store.FilePath}",
+                $"{UiText.SettingsNotSaved}\n\n{_store.FilePath}",
                 UiText.AppName,
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);

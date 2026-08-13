@@ -3,6 +3,7 @@ using System.Text;
 using System.Windows;
 using AutoCorrect.Core.Configuration;
 using AutoCorrect.Core.Diagnostics;
+using AutoCorrect.Core.Localization;
 
 namespace AutoCorrect.App.Ui;
 
@@ -15,17 +16,27 @@ public partial class AboutWindow : Window
         InitializeComponent();
 
         var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.0";
+
+        Title = UiText.AboutTitle;
         VersionText.Text = $"Version {version}";
+        TaglineText.Text = UiText.AppTagline;
+        NoteHeader.Text = UiText.AboutNoteHeader;
+        NoteText.Text = UiText.AboutNoteText;
+        CloseButton.Content = UiText.AboutClose;
+
+        var rephrase = string.IsNullOrWhiteSpace(settings.RephraseHotkey)
+            ? UiText.AboutNotAssigned
+            : settings.RephraseHotkey;
 
         var details = new StringBuilder()
-            .AppendLine($"Engine: {engineName}")
-            .AppendLine($"Hotkey Korrigieren: {settings.PrimaryHotkey}")
-            .AppendLine($"Hotkey Umformulieren: {(string.IsNullOrWhiteSpace(settings.RephraseHotkey) ? "nicht belegt" : settings.RephraseHotkey)}")
+            .AppendLine($"{UiText.AboutEngine}: {engineName}")
+            .AppendLine($"{UiText.AboutHotkeyCorrect}: {settings.PrimaryHotkey}")
+            .AppendLine($"{UiText.AboutHotkeyRephrase}: {rephrase}")
             .AppendLine($"LanguageTool: {settings.LanguageToolEndpoint}")
-            .AppendLine($"Sprache: {settings.Language}")
+            .AppendLine($"{UiText.AboutLanguage}: {LanguageOptions.DescribeCorrection(settings.Language)}")
             .AppendLine()
-            .AppendLine($"Einstellungen: {SettingsStore.DefaultFilePath}")
-            .Append($"Protokoll: {Log.DefaultFilePath}");
+            .AppendLine($"{UiText.AboutSettingsPath}: {SettingsStore.DefaultFilePath}")
+            .Append($"{UiText.AboutLogPath}: {Log.DefaultFilePath}");
 
         DetailsText.Text = details.ToString();
 

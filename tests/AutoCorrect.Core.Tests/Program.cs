@@ -9,6 +9,7 @@ SettingsStoreTests.Register(runner);
 LanguageToolEngineTests.Register(runner);
 EngineRouterTests.Register(runner);
 LoggingTests.Register(runner);
+LocalizationTests.Register(runner);
 
 // Only registered when AUTOCORRECT_LT_ENDPOINT points at a real LanguageTool server.
 if (LanguageToolIntegrationTests.IsEnabled)

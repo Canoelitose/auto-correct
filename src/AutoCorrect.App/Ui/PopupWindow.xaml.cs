@@ -70,7 +70,6 @@ public partial class PopupWindow : Window
         foreach (var (mode, button) in _modeButtons)
         {
             var captured = mode;
-            button.Content = UiText.ModeLabel(mode);
             button.Click += (_, _) =>
             {
                 _fallbackNote = null;
@@ -79,9 +78,25 @@ public partial class PopupWindow : Window
         }
 
         EngineLabel.Text = _engine.Name;
+        ApplyTexts();
 
         Deactivated += OnDeactivated;
         PreviewKeyDown += OnPreviewKeyDown;
+    }
+
+    /// <summary>
+    /// Writes the current interface language into the window. Called once at construction; the
+    /// application rebuilds the popup when the language setting changes.
+    /// </summary>
+    private void ApplyTexts()
+    {
+        OriginalLabel.Text = UiText.OriginalLabel;
+        ShortcutHint.Text = UiText.ShortcutHint;
+
+        foreach (var (mode, button) in _modeButtons)
+        {
+            button.Content = UiText.ModeLabel(mode);
+        }
     }
 
     /// <summary>
@@ -148,7 +163,7 @@ public partial class PopupWindow : Window
             // Phase 1 has no LLM engine: fall back instead of showing an error for a mode the
             // user did not explicitly pick. The note stays visible in the status line until the
             // user picks a mode themselves.
-            _fallbackNote = $"{UiText.ModeLabel(mode)} ist nicht verfügbar – {UiText.ModeCorrect} wird verwendet.";
+            _fallbackNote = UiText.ModeFallbackNote(mode);
             mode = ProcessingMode.Correct;
         }
 
@@ -464,9 +479,7 @@ public partial class PopupWindow : Window
         {
             var supported = _engine.SupportsMode(mode);
             button.IsEnabled = supported;
-            button.ToolTip = supported
-                ? null
-                : $"{UiText.ModeLabel(mode)} benötigt ein lokales Sprachmodell (ab Phase 2).";
+            button.ToolTip = supported ? null : UiText.ModeUnavailable(mode);
 
             var active = supported && mode == _mode;
             button.Background = active
@@ -480,6 +493,24 @@ public partial class PopupWindow : Window
                 : (Brush)FindResource("ChipBorder");
         }
     }
+
+    // ---------------------------------------------------------------- test seams
+    // Only used by AutoCorrect.App.Tests to assert on what the window actually shows.
+
+    internal string ResultTextForTests => ResultBox.Text;
+
+    internal string OriginalPreviewForTests => OriginalText.Text;
+
+    internal string StatusLineForTests => StatusText.Text;
+
+    internal string ShortcutHintForTests => ShortcutHint.Text;
+
+    internal bool ErrorVisibleForTests => ErrorPanel.Visibility == Visibility.Visible;
+
+    internal string ErrorMessageForTests => ErrorText.Text;
+
+    internal string ModeButtonTextForTests(ProcessingMode mode) =>
+        _modeButtons[mode].Content as string ?? string.Empty;
 
     private static string Shorten(string text, int maxLength)
     {

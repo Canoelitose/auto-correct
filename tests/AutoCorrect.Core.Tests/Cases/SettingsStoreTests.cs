@@ -12,7 +12,10 @@ public static class SettingsStoreTests
             var settings = new AppSettings();
             Assert.Equal("Ctrl+Alt+Space", settings.PrimaryHotkey);
             Assert.Equal("Ctrl+Alt+R", settings.RephraseHotkey);
-            Assert.Equal("de-CH", settings.Language);
+            // Automatic detection by default: German and English both work without switching,
+            // and preferredVariants keeps Swiss spelling.
+            Assert.Equal("auto", settings.Language);
+            Assert.Equal("de-CH,en-US", settings.PreferredVariants);
             Assert.Equal("http://localhost:8081/v2/check", settings.LanguageToolEndpoint);
             Assert.Equal("http://localhost:11434/v1", settings.LlmEndpoint);
             Assert.Equal(5000, settings.MaxInputLength);

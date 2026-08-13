@@ -113,7 +113,7 @@
                     CornerRadius="6"
                     Background="{StaticResource SurfaceMuted}">
                 <StackPanel>
-                    <TextBlock Text="Original"
+                    <TextBlock x:Name="OriginalLabel"
                                FontSize="11"
                                Margin="0,0,0,3"
                                Foreground="{StaticResource TextMuted}" />
@@ -158,10 +158,10 @@
 
             <!-- Modes -->
             <StackPanel Grid.Row="5" Orientation="Horizontal" Margin="0,12,0,0">
-                <Button x:Name="ModeCorrectButton" Style="{StaticResource ModeButtonStyle}" Content="Korrigieren" />
-                <Button x:Name="ModeRephraseButton" Style="{StaticResource ModeButtonStyle}" Content="Umformulieren" />
-                <Button x:Name="ModeFormalButton" Style="{StaticResource ModeButtonStyle}" Content="Förmlicher" />
-                <Button x:Name="ModeShortenButton" Style="{StaticResource ModeButtonStyle}" Content="Kürzer" />
+                <Button x:Name="ModeCorrectButton" Style="{StaticResource ModeButtonStyle}" />
+                <Button x:Name="ModeRephraseButton" Style="{StaticResource ModeButtonStyle}" />
+                <Button x:Name="ModeFormalButton" Style="{StaticResource ModeButtonStyle}" />
+                <Button x:Name="ModeShortenButton" Style="{StaticResource ModeButtonStyle}" />
             </StackPanel>
 
             <!-- Status and shortcuts -->
@@ -170,10 +170,10 @@
                            FontSize="11"
                            TextTrimming="CharacterEllipsis"
                            Foreground="{StaticResource TextMuted}" />
-                <TextBlock HorizontalAlignment="Right"
+                <TextBlock x:Name="ShortcutHint"
+                           HorizontalAlignment="Right"
                            FontSize="11"
-                           Foreground="{StaticResource TextMuted}"
-                           Text="Enter: Übernehmen · Esc: Abbrechen · Ctrl+C: Kopieren" />
+                           Foreground="{StaticResource TextMuted}" />
             </Grid>
         </Grid>
     </Border>

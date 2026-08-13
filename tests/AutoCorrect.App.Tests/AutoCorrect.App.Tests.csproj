@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <LangVersion>12.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>AutoCorrect.App.Tests</RootNamespace>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <!-- WinExe so no console window flashes, but the runner still writes to stdout when
+         started from a console. -->
+    <StartupObject>AutoCorrect.App.Tests.Program</StartupObject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\AutoCorrect.App\AutoCorrect.App.csproj" />
+    <ProjectReference Include="..\..\src\AutoCorrect.Core\AutoCorrect.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The tiny runner is shared with the core test project instead of being duplicated. -->
+    <Compile Include="..\AutoCorrect.Core.Tests\TestRunner.cs" Link="TestRunner.cs" />
+  </ItemGroup>
+
+</Project>

@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="AutoCorrect – Einstellungen"
         Width="520"
-        Height="470"
+        Height="600"
         ResizeMode="NoResize"
         WindowStartupLocation="CenterScreen"
         ShowInTaskbar="True"
@@ -38,12 +38,18 @@
 
         <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
             <StackPanel>
-                <TextBlock Text="Hotkey Korrigieren" Style="{StaticResource FieldLabel}" Margin="0,0,0,4" />
-                <TextBox x:Name="PrimaryHotkeyBox" IsReadOnly="True" Padding="6,5" />
-                <TextBlock Text="Feld anklicken und die gewünschte Tastenkombination drücken."
-                           Style="{StaticResource Hint}" />
+                <TextBlock x:Name="InterfaceLanguageLabel" Style="{StaticResource FieldLabel}" Margin="0,0,0,4" />
+                <ComboBox x:Name="InterfaceLanguageBox" Padding="6,5" />
 
-                <TextBlock Text="Hotkey Umformulieren" Style="{StaticResource FieldLabel}" />
+                <TextBlock x:Name="CorrectionLanguageLabel" Style="{StaticResource FieldLabel}" />
+                <ComboBox x:Name="CorrectionLanguageBox" Padding="6,5" />
+                <TextBlock x:Name="CorrectionLanguageHint" Style="{StaticResource Hint}" />
+
+                <TextBlock x:Name="PrimaryHotkeyLabel" Style="{StaticResource FieldLabel}" />
+                <TextBox x:Name="PrimaryHotkeyBox" IsReadOnly="True" Padding="6,5" />
+                <TextBlock x:Name="HotkeyHint" Style="{StaticResource Hint}" />
+
+                <TextBlock x:Name="RephraseHotkeyLabel" Style="{StaticResource FieldLabel}" />
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
@@ -53,35 +59,23 @@
                     <Button x:Name="ClearRephraseButton"
                             Grid.Column="1"
                             Margin="8,0,0,0"
-                            Padding="10,4"
-                            Content="Löschen" />
+                            Padding="10,4" />
                 </Grid>
 
-                <TextBlock Text="LanguageTool-Adresse" Style="{StaticResource FieldLabel}" />
+                <TextBlock x:Name="EndpointLabel" Style="{StaticResource FieldLabel}" />
                 <TextBox x:Name="EndpointBox" Padding="6,5" />
-                <TextBlock Text="Standard: http://localhost:8081/v2/check" Style="{StaticResource Hint}" />
+                <TextBlock x:Name="EndpointHint" Style="{StaticResource Hint}" />
 
-                <TextBlock Text="Sprache" Style="{StaticResource FieldLabel}" />
-                <TextBox x:Name="LanguageBox" Padding="6,5" />
-                <TextBlock Text="Standard: de-CH (Schweizer Rechtschreibung, ss statt ß)"
-                           Style="{StaticResource Hint}" />
+                <CheckBox x:Name="AutoStartCheck" Margin="0,18,0,0" />
 
-                <CheckBox x:Name="AutoStartCheck"
-                          Margin="0,18,0,0"
-                          Content="Mit Windows starten" />
+                <CheckBox x:Name="UiAutomationCheck" Margin="0,10,0,0" />
 
-                <CheckBox x:Name="UiAutomationCheck"
-                          Margin="0,10,0,0"
-                          Content="Text zuerst über UI Automation lesen (empfohlen)" />
-
-                <TextBlock Text="Ohne UI Automation wird immer über die Zwischenablage gelesen."
-                           Style="{StaticResource Hint}" />
+                <TextBlock x:Name="UiAutomationHint" Style="{StaticResource Hint}" />
 
                 <Button x:Name="TestButton"
                         Margin="0,18,0,0"
                         Padding="10,5"
-                        HorizontalAlignment="Left"
-                        Content="Verbindung testen" />
+                        HorizontalAlignment="Left" />
 
                 <TextBlock x:Name="TestResultText" Style="{StaticResource Hint}" />
 
@@ -97,8 +91,8 @@
                     Orientation="Horizontal"
                     HorizontalAlignment="Right"
                     Margin="0,16,0,0">
-            <Button x:Name="CancelButton" Padding="16,6" Margin="0,0,8,0" Content="Abbrechen" IsCancel="True" />
-            <Button x:Name="SaveButton" Padding="16,6" Content="Speichern" IsDefault="True" />
+            <Button x:Name="CancelButton" Padding="16,6" Margin="0,0,8,0" IsCancel="True" />
+            <Button x:Name="SaveButton" Padding="16,6" IsDefault="True" />
         </StackPanel>
     </Grid>
 </Window>

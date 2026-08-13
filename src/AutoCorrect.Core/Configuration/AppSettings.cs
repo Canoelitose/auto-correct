@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using AutoCorrect.Core.Diagnostics;
 using AutoCorrect.Core.Engines.LanguageTool;
+using AutoCorrect.Core.Localization;
 
 namespace AutoCorrect.Core.Configuration;
 
@@ -20,7 +21,20 @@ public sealed class AppSettings
 
     public string LanguageToolEndpoint { get; set; } = LanguageToolEngine.DefaultEndpoint;
 
-    public string Language { get; set; } = LanguageToolEngine.DefaultLanguage;
+    /// <summary>
+    /// Language of the text being corrected. "auto" lets LanguageTool detect it, which covers
+    /// German and English in the same session without switching anything.
+    /// </summary>
+    public string Language { get; set; } = LanguageOptions.AutomaticDetection;
+
+    /// <summary>
+    /// Variants preferred while detecting. Without them Swiss German text would be treated as
+    /// de-DE and "ss" would be corrected to "ß".
+    /// </summary>
+    public string PreferredVariants { get; set; } = LanguageOptions.DefaultPreferredVariants;
+
+    /// <summary>Interface language: "auto" (Windows display language), "de" or "en".</summary>
+    public string InterfaceLanguage { get; set; } = UiText.AutomaticSetting;
 
     /// <summary>Phase 2: OpenAI compatible base address (llama.cpp, Ollama, own API).</summary>
     public string LlmEndpoint { get; set; } = "http://localhost:11434/v1";
@@ -68,7 +82,17 @@ public sealed class AppSettings
 
         if (string.IsNullOrWhiteSpace(Language))
         {
-            Language = LanguageToolEngine.DefaultLanguage;
+            Language = LanguageOptions.AutomaticDetection;
+        }
+
+        if (string.IsNullOrWhiteSpace(PreferredVariants))
+        {
+            PreferredVariants = LanguageOptions.DefaultPreferredVariants;
+        }
+
+        if (string.IsNullOrWhiteSpace(InterfaceLanguage))
+        {
+            InterfaceLanguage = UiText.AutomaticSetting;
         }
 
         if (!HotkeyDefinition.TryParse(PrimaryHotkey, out _, out _))
@@ -84,6 +108,8 @@ public sealed class AppSettings
         StartWithWindows = StartWithWindows,
         LanguageToolEndpoint = LanguageToolEndpoint,
         Language = Language,
+        PreferredVariants = PreferredVariants,
+        InterfaceLanguage = InterfaceLanguage,
         LlmEndpoint = LlmEndpoint,
         LlmModel = LlmModel,
         LogLevel = LogLevel,

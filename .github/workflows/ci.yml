@@ -28,9 +28,62 @@ jobs:
       - name: Build
         run: dotnet build AutoCorrect.sln -c Release --no-restore
 
-      - name: Test
-        # Exits with 1 as soon as a single test fails.
+      # ---------------------------------------------------------------- LanguageTool
+      # The integration tests talk to a real server instead of a stub. The download is
+      # cached, so it only costs time on the first run.
+
+      - name: Cache LanguageTool
+        id: languagetool-cache
+        uses: actions/cache@v4
+        with:
+          path: languagetool
+          key: languagetool-6.6
+
+      - name: Download LanguageTool
+        if: steps.languagetool-cache.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri 'https://languagetool.org/download/LanguageTool-6.6.zip' -OutFile lt.zip
+          Expand-Archive lt.zip -DestinationPath lt-extract
+          New-Item -ItemType Directory -Force -Path languagetool | Out-Null
+          Move-Item lt-extract/LanguageTool-6.6/* languagetool/
+          Remove-Item lt.zip, lt-extract -Recurse -Force
+
+      - name: Start LanguageTool
+        shell: pwsh
+        run: |
+          Start-Process -FilePath 'java' -WorkingDirectory 'languagetool' -WindowStyle Hidden `
+            -ArgumentList '-cp', 'languagetool-server.jar;libs/*', 'org.languagetool.server.HTTPServer', '--port', '8081'
+
+          # The first start loads the language models and takes a while.
+          $ready = $false
+          foreach ($attempt in 1..60) {
+              try {
+                  Invoke-RestMethod -Uri 'http://localhost:8081/v2/languages' -TimeoutSec 5 | Out-Null
+                  $ready = $true
+                  break
+              } catch {
+                  Start-Sleep -Seconds 2
+              }
+          }
+
+          if (-not $ready) { throw 'LanguageTool did not start within 120 seconds.' }
+          Write-Host 'LanguageTool is up.'
+
+      # ---------------------------------------------------------------- tests
+
+      - name: Core tests (including the LanguageTool integration tests)
+        env:
+          AUTOCORRECT_LT_ENDPOINT: http://localhost:8081/v2/check
         run: dotnet run --project tests/AutoCorrect.Core.Tests -c Release --no-build
+
+      - name: Windows tests (tray, hotkeys, clipboard, popup, insertion)
+        shell: pwsh
+        run: |
+          # A WinExe writes to the console of its parent, so the output is captured explicitly.
+          $exe = 'tests/AutoCorrect.App.Tests/bin/Release/net8.0-windows/AutoCorrect.App.Tests.exe'
+          & $exe | Tee-Object -Variable output
+          if ($LASTEXITCODE -ne 0) { throw "Windows tests failed with exit code $LASTEXITCODE" }
 
       - name: Publish smoke test
         run: >
@@ -38,3 +91,26 @@ jobs:
           -c Release -r win-x64 --self-contained false
           -p:PublishSingleFile=true -p:DebugType=none
           -o publish/smoke
+
+      - name: Start the published application and check it survives
+        shell: pwsh
+        run: |
+          # Proves the executable really runs: it starts, stays alive as a tray application
+          # and writes its log. Nothing here needs a visible window.
+          $exe = Resolve-Path publish/smoke/AutoCorrect.exe
+          $process = Start-Process -FilePath $exe -PassThru
+          Start-Sleep -Seconds 12
+
+          if ($process.HasExited) {
+              throw "The application exited on its own with code $($process.ExitCode)."
+          }
+
+          Write-Host "The application is running (PID $($process.Id))."
+          Stop-Process -Id $process.Id -Force
+          Start-Sleep -Seconds 2
+
+          $log = Join-Path $env:LOCALAPPDATA 'AutoCorrect/logs/autocorrect.log'
+          if (Test-Path $log) {
+              Write-Host '--- log ---'
+              Get-Content $log
+          }

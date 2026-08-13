@@ -80,6 +80,49 @@ public static class LanguageToolIntegrationTests
                 $"length changed implausibly: {input.Length} -> {result.Length}");
         });
 
+        runner.Add("Integration: English is detected and corrected automatically", async () =>
+        {
+            var result = await CorrectAsync(endpoint, "I has went to the shop and buyed a books.");
+
+            Assert.False(result.Contains("has went", StringComparison.Ordinal), $"not corrected: {result}");
+            Assert.False(result.Contains("buyed", StringComparison.Ordinal), $"not corrected: {result}");
+        });
+
+        runner.Add("Integration: German and English in the same session, no switching needed", async () =>
+        {
+            // The same engine instance and the same settings handle both languages.
+            var german = await CorrectAsync(endpoint, "Ich habe gestern ein Buch gelest.");
+            var english = await CorrectAsync(endpoint, "I has went to the shop.");
+
+            Assert.False(german.Contains("gelest", StringComparison.Ordinal), $"German failed: {german}");
+            Assert.False(english.Contains("has went", StringComparison.Ordinal), $"English failed: {english}");
+        });
+
+        runner.Add("Integration: automatic detection keeps Swiss spelling", async () =>
+        {
+            var result = await CorrectAsync(endpoint, "Die Strasse ist gross und weiss gestrichen.");
+            Assert.False(result.Contains('ß'), $"Swiss spelling violated: {result}");
+        });
+
+        runner.Add("Integration: an explicitly chosen language is honoured", async () =>
+        {
+            var settings = new AppSettings
+            {
+                LanguageToolEndpoint = endpoint,
+                Language = "en-US",
+                RequestTimeoutSeconds = 60,
+            };
+
+            var engine = new LanguageToolEngine(new HttpClient(), () => settings);
+            var text = new System.Text.StringBuilder();
+            await foreach (var chunk in engine.ProcessAsync("I has went home.", ProcessingMode.Correct, CancellationToken.None))
+            {
+                text.Append(chunk);
+            }
+
+            Assert.False(text.ToString().Contains("has went", StringComparison.Ordinal), $"not corrected: {text}");
+        });
+
         runner.Add("Integration: text with 5000 characters is processed", async () =>
         {
             var input = string.Join(" ", Enumerable.Repeat("Dies ist ein normaler Satz ohne Fehler.", 128));

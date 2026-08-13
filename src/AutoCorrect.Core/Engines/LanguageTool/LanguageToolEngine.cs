@@ -83,12 +83,25 @@ public sealed class LanguageToolEngine : ITextEngine
         string body;
         try
         {
-            using var content = new FormUrlEncodedContent(new Dictionary<string, string>
+            var fields = new Dictionary<string, string>
             {
                 ["text"] = input,
-                ["language"] = string.IsNullOrWhiteSpace(settings.Language) ? DefaultLanguage : settings.Language,
+                ["language"] = LanguageOptions.IsAutomatic(settings.Language)
+                    ? LanguageOptions.AutomaticDetection
+                    : settings.Language,
                 ["enabledOnly"] = "false",
-            });
+            };
+
+            if (LanguageOptions.IsAutomatic(settings.Language))
+            {
+                // Detection alone would pick de-DE for Swiss text and start proposing "ß";
+                // the preferred variants pin it to de-CH and en-US.
+                fields["preferredVariants"] = string.IsNullOrWhiteSpace(settings.PreferredVariants)
+                    ? LanguageOptions.DefaultPreferredVariants
+                    : settings.PreferredVariants;
+            }
+
+            using var content = new FormUrlEncodedContent(fields);
 
             using var response = await _http
                 .PostAsync(settings.LanguageToolEndpoint, content, timeout.Token)

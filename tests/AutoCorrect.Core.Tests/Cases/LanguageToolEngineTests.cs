@@ -36,15 +36,41 @@ public static class LanguageToolEngineTests
             Assert.Equal("Ich habe gestern ein Buch gelesen und dann geschlafen.", result);
         });
 
-        runner.Add("LanguageTool: sends the text and de-CH as the language", async () =>
+        runner.Add("LanguageTool: asks for automatic detection with Swiss and US variants", async () =>
         {
             using var server = new FakeLanguageToolServer(_ => (200, """{"matches":[]}"""));
             await CollectAsync(server, "Ein Test.");
 
             Assert.NotNull(server.LastRequestBody);
             var decoded = Uri.UnescapeDataString(server.LastRequestBody!.Replace("+", " ", StringComparison.Ordinal));
-            Assert.Contains("language=de-CH", decoded);
+
+            // Detection covers German and English in one session; the preferred variants stop
+            // LanguageTool from treating Swiss German as de-DE and proposing "ß".
+            Assert.Contains("language=auto", decoded);
+            Assert.Contains("preferredVariants=de-CH,en-US", decoded);
             Assert.Contains("text=Ein Test.", decoded);
+        });
+
+        runner.Add("LanguageTool: an explicit language is sent without preferredVariants", async () =>
+        {
+            using var server = new FakeLanguageToolServer(_ => (200, """{"matches":[]}"""));
+
+            var settings = new AppSettings
+            {
+                LanguageToolEndpoint = server.CheckEndpoint,
+                Language = "en-GB",
+            };
+
+            using var http = new HttpClient();
+            var engine = new LanguageToolEngine(http, () => settings);
+            await foreach (var _ in engine.ProcessAsync("A test.", ProcessingMode.Correct, CancellationToken.None))
+            {
+            }
+
+            var decoded = Uri.UnescapeDataString(server.LastRequestBody!.Replace("+", " ", StringComparison.Ordinal));
+            Assert.Contains("language=en-GB", decoded);
+            Assert.False(decoded.Contains("preferredVariants", StringComparison.Ordinal),
+                "preferredVariants must only be sent for automatic detection");
         });
 
         runner.Add("LanguageTool: yields exactly one element", async () =>

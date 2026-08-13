@@ -31,12 +31,15 @@ public partial class SettingsWindow : Window
         _primaryHotkey = UpdatedSettings.PrimaryHotkeyDefinition;
         _rephraseHotkey = UpdatedSettings.RephraseHotkeyDefinition;
 
+        ApplyTexts();
+
         PrimaryHotkeyBox.Text = _primaryHotkey.ToString();
         RephraseHotkeyBox.Text = _rephraseHotkey?.ToString() ?? string.Empty;
         EndpointBox.Text = UpdatedSettings.LanguageToolEndpoint;
-        LanguageBox.Text = UpdatedSettings.Language;
         AutoStartCheck.IsChecked = UpdatedSettings.StartWithWindows;
         UiAutomationCheck.IsChecked = UpdatedSettings.PreferUiAutomation;
+
+        FillLanguageBoxes();
 
         PrimaryHotkeyBox.PreviewKeyDown += (_, e) => CaptureHotkey(e, isPrimary: true);
         RephraseHotkeyBox.PreviewKeyDown += (_, e) => CaptureHotkey(e, isPrimary: false);
@@ -47,6 +50,10 @@ public partial class SettingsWindow : Window
             HideError();
         };
 
+        // Switching the interface language updates the dialog immediately, so the effect of
+        // the setting is visible before saving.
+        InterfaceLanguageBox.SelectionChanged += (_, _) => OnInterfaceLanguageChanged();
+
         TestButton.Click += async (_, _) => await TestConnectionAsync();
         SaveButton.Click += (_, _) => Save();
         CancelButton.Click += (_, _) => DialogResult = false;
@@ -54,6 +61,65 @@ public partial class SettingsWindow : Window
 
     /// <summary>The edited copy. Only meaningful when ShowDialog returned true.</summary>
     public AppSettings UpdatedSettings { get; }
+
+    private void ApplyTexts()
+    {
+        Title = UiText.SettingsTitle;
+        InterfaceLanguageLabel.Text = UiText.SettingsInterfaceLanguage;
+        CorrectionLanguageLabel.Text = UiText.SettingsCorrectionLanguage;
+        CorrectionLanguageHint.Text = UiText.SettingsCorrectionLanguageHint;
+        PrimaryHotkeyLabel.Text = UiText.SettingsHotkeyPrimary;
+        HotkeyHint.Text = UiText.SettingsHotkeyHint;
+        RephraseHotkeyLabel.Text = UiText.SettingsHotkeyRephrase;
+        ClearRephraseButton.Content = UiText.SettingsClear;
+        EndpointLabel.Text = UiText.SettingsLanguageTool;
+        EndpointHint.Text = UiText.SettingsLanguageToolHint;
+        AutoStartCheck.Content = UiText.TrayStartWithWindows;
+        UiAutomationCheck.Content = UiText.SettingsUiAutomation;
+        UiAutomationHint.Text = UiText.SettingsUiAutomationHint;
+        TestButton.Content = UiText.SettingsTestConnection;
+        SaveButton.Content = UiText.SettingsSave;
+        CancelButton.Content = UiText.SettingsCancel;
+    }
+
+    private void FillLanguageBoxes()
+    {
+        Select(InterfaceLanguageBox, LanguageOptions.Interface, UpdatedSettings.InterfaceLanguage);
+        Select(CorrectionLanguageBox, LanguageOptions.Correction, UpdatedSettings.Language);
+
+        static void Select(
+            System.Windows.Controls.ComboBox box,
+            IReadOnlyList<LanguageOption> options,
+            string? current)
+        {
+            box.ItemsSource = options;
+            box.SelectedItem =
+                options.FirstOrDefault(o => string.Equals(o.Code, current, StringComparison.OrdinalIgnoreCase))
+                ?? options[0];
+        }
+    }
+
+    private void OnInterfaceLanguageChanged()
+    {
+        if (InterfaceLanguageBox.SelectedItem is not LanguageOption option)
+        {
+            return;
+        }
+
+        if (string.Equals(option.Code, UpdatedSettings.InterfaceLanguage, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        UpdatedSettings.InterfaceLanguage = option.Code;
+        UiText.Language = UiText.Resolve(option.Code);
+
+        // The drop-down entries carry translated names as well, so both lists are rebuilt.
+        var correction = (CorrectionLanguageBox.SelectedItem as LanguageOption)?.Code;
+        ApplyTexts();
+        UpdatedSettings.Language = correction ?? UpdatedSettings.Language;
+        FillLanguageBoxes();
+    }
 
     private void CaptureHotkey(KeyEventArgs e, bool isPrimary)
     {
@@ -138,7 +204,7 @@ public partial class SettingsWindow : Window
     private async Task TestConnectionAsync()
     {
         TestButton.IsEnabled = false;
-        TestResultText.Text = "Verbindung wird geprüft …";
+        TestResultText.Text = UiText.TestRunning;
 
         try
         {
@@ -150,13 +216,11 @@ public partial class SettingsWindow : Window
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             var available = await _probe(probeSettings, cts.Token).ConfigureAwait(true);
 
-            TestResultText.Text = available
-                ? "LanguageTool ist erreichbar."
-                : "LanguageTool antwortet nicht. Läuft der Server auf dieser Adresse?";
+            TestResultText.Text = available ? UiText.TestOk : UiText.TestFailed;
         }
         catch (OperationCanceledException)
         {
-            TestResultText.Text = "LanguageTool antwortet nicht.";
+            TestResultText.Text = UiText.TestFailed;
         }
         finally
         {
@@ -170,7 +234,7 @@ public partial class SettingsWindow : Window
         if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var uri) ||
             (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
         {
-            ShowError("Die LanguageTool-Adresse muss eine vollständige http- oder https-Adresse sein.");
+            ShowError(UiText.EndpointInvalid);
             return;
         }
 
@@ -183,16 +247,26 @@ public partial class SettingsWindow : Window
 
         if (_rephraseHotkey is { } rephrase && rephrase == _primaryHotkey)
         {
-            ShowError("Die beiden Hotkeys dürfen nicht identisch sein.");
+            ShowError(UiText.HotkeysIdentical);
             return;
         }
 
         UpdatedSettings.PrimaryHotkey = _primaryHotkey.ToString();
         UpdatedSettings.RephraseHotkey = _rephraseHotkey?.ToString() ?? string.Empty;
         UpdatedSettings.LanguageToolEndpoint = endpoint;
-        UpdatedSettings.Language = LanguageBox.Text.Trim();
         UpdatedSettings.StartWithWindows = AutoStartCheck.IsChecked == true;
         UpdatedSettings.PreferUiAutomation = UiAutomationCheck.IsChecked == true;
+
+        if (InterfaceLanguageBox.SelectedItem is LanguageOption interfaceLanguage)
+        {
+            UpdatedSettings.InterfaceLanguage = interfaceLanguage.Code;
+        }
+
+        if (CorrectionLanguageBox.SelectedItem is LanguageOption correctionLanguage)
+        {
+            UpdatedSettings.Language = correctionLanguage.Code;
+        }
+
         UpdatedSettings.Normalize();
 
         DialogResult = true;
