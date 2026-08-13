@@ -23,13 +23,30 @@ public enum HotkeyModifiers
 /// </summary>
 public readonly record struct HotkeyDefinition(HotkeyModifiers Modifiers, uint VirtualKey)
 {
+    /// <summary>
+    /// Win+Space. Windows uses this combination for the keyboard layout switcher, so
+    /// RegisterHotKey cannot claim it; the hotkey manager falls back to a low level keyboard
+    /// hook, which intercepts the combination and swallows it.
+    /// </summary>
     public static readonly HotkeyDefinition DefaultPrimary =
+        new(HotkeyModifiers.Windows, VirtualKeys.Space);
+
+    /// <summary>Combination used before Win+Space became the default.</summary>
+    public static readonly HotkeyDefinition ClassicPrimary =
         new(HotkeyModifiers.Control | HotkeyModifiers.Alt, VirtualKeys.Space);
 
     public static readonly HotkeyDefinition DefaultRephrase =
         new(HotkeyModifiers.Control | HotkeyModifiers.Alt, VirtualKeys.R);
 
     public bool IsEmpty => Modifiers == HotkeyModifiers.None && VirtualKey == 0;
+
+    /// <summary>
+    /// True for combinations Windows claims for itself. RegisterHotKey fails on these, so the
+    /// low level keyboard hook is used instead.
+    /// </summary>
+    public bool IsReservedByWindows =>
+        Modifiers == HotkeyModifiers.Windows &&
+        VirtualKey is VirtualKeys.Space or VirtualKeys.Tab;
 
     /// <summary>Returns a German error message, or null when the combination is usable.</summary>
     public string? Validate()
@@ -47,13 +64,6 @@ public readonly record struct HotkeyDefinition(HotkeyModifiers Modifiers, uint V
         if (Modifiers == HotkeyModifiers.None)
         {
             return UiText.HotkeyNeedsModifier;
-        }
-
-        // Windows reserves Win+Space for the keyboard layout switcher; RegisterHotKey
-        // reports success but the hotkey never fires.
-        if (Modifiers == HotkeyModifiers.Windows && VirtualKey == VirtualKeys.Space)
-        {
-            return UiText.HotkeyWinSpaceReserved;
         }
 
         return null;

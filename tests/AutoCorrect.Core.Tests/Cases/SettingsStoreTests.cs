@@ -10,7 +10,7 @@ public static class SettingsStoreTests
         runner.Add("Settings: defaults match the specification", () =>
         {
             var settings = new AppSettings();
-            Assert.Equal("Ctrl+Alt+Space", settings.PrimaryHotkey);
+            Assert.Equal("Win+Space", settings.PrimaryHotkey);
             Assert.Equal("Ctrl+Alt+R", settings.RephraseHotkey);
             // Automatic detection by default: German and English both work without switching,
             // and preferredVariants keeps Swiss spelling.
@@ -29,7 +29,7 @@ public static class SettingsStoreTests
             using var temp = new TempDirectory();
             var store = new SettingsStore(Path.Combine(temp.Path, "settings.json"));
             var settings = store.Load();
-            Assert.Equal("Ctrl+Alt+Space", settings.PrimaryHotkey);
+            Assert.Equal("Win+Space", settings.PrimaryHotkey);
         });
 
         runner.Add("Settings: save and load round trip", () =>
@@ -82,7 +82,7 @@ public static class SettingsStoreTests
             File.WriteAllText(path, "{ this is not json");
 
             var settings = new SettingsStore(path).Load();
-            Assert.Equal("Ctrl+Alt+Space", settings.PrimaryHotkey);
+            Assert.Equal("Win+Space", settings.PrimaryHotkey);
             Assert.True(File.Exists(path + ".invalid"), "damaged file was not preserved");
         });
 
@@ -111,10 +111,10 @@ public static class SettingsStoreTests
         {
             using var temp = new TempDirectory();
             var path = Path.Combine(temp.Path, "settings.json");
-            File.WriteAllText(path, """{ "primaryHotkey": "Win+Space" }""");
+            File.WriteAllText(path, """{ "primaryHotkey": "Ctrl+Alt" }""");
 
             var settings = new SettingsStore(path).Load();
-            Assert.Equal("Ctrl+Alt+Space", settings.PrimaryHotkey);
+            Assert.Equal("Win+Space", settings.PrimaryHotkey);
             Assert.Equal(HotkeyDefinition.DefaultPrimary, settings.PrimaryHotkeyDefinition);
         });
 
@@ -126,10 +126,10 @@ public static class SettingsStoreTests
 
         runner.Add("Settings: clone is independent", () =>
         {
-            var original = new AppSettings { PrimaryHotkey = "Ctrl+Alt+Space" };
+            var original = new AppSettings { PrimaryHotkey = "Win+Space" };
             var clone = original.Clone();
             clone.PrimaryHotkey = "Ctrl+Alt+R";
-            Assert.Equal("Ctrl+Alt+Space", original.PrimaryHotkey);
+            Assert.Equal("Win+Space", original.PrimaryHotkey);
         });
     }
 }

@@ -34,7 +34,7 @@ public static class LocalizationTests
                 UiText.LanguageToolUnavailable,
                 UiText.UnexpectedError,
                 UiText.HotkeyNeedsModifier,
-                UiText.HotkeyWinSpaceReserved,
+                UiText.HotkeyWinSpaceNote,
                 UiText.TextTooLong(6000, 5000),
                 UiText.ModeFallbackNote(ProcessingMode.Rephrase),
             };

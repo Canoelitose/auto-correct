@@ -71,6 +71,14 @@ verworfen, statt zwei widersprüchliche Vorschläge zu vermischen.
 Wartezeit ist als Einstellung mit 80 ms Untergrenze hinterlegt, damit sie nicht versehentlich
 wegoptimiert wird.
 
+**Win+Leertaste geht nicht über RegisterHotKey.** Die Shell besitzt die Kombination für den
+Layout-Wechsel, `RegisterHotKey` scheitert dort. `HotkeyManager` weicht deshalb auf einen
+`WH_KEYBOARD_LL`-Haken aus, der vor der Shell sitzt, die Kombination abfängt und mit Rückgabe 1
+schluckt. Zwei Regeln dabei: Der Callback muss sofort zurückkehren, sonst entfernt Windows den
+Haken – die Arbeit wird nur auf den Dispatcher gelegt. Und weil die Shell die geschluckte Taste
+nie sieht, würde sie beim Loslassen der Windows-Taste das Startmenü öffnen; ein eingeschobener
+Ctrl-Tipp verhindert das.
+
 **Noch gedrückte Zusatztasten.** Wenn `Ctrl+Alt+Space` auslöst, hält der Benutzer meistens noch
 `Ctrl+Alt`. Ein danach gesendetes `Ctrl+C` käme in der Zielanwendung als `Ctrl+Alt+C` an.
 `InputSimulator.ReleaseHeldModifiers()` schickt deshalb zuerst Key-Up für alles, was laut

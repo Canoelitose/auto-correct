@@ -54,6 +54,10 @@ public partial class SettingsWindow : Window
         // the setting is visible before saving.
         InterfaceLanguageBox.SelectionChanged += (_, _) => OnInterfaceLanguageChanged();
 
+        // The first control takes focus when the window opens, and the scroll viewer then
+        // brings it into view - which pushes the heading above it out of sight.
+        Loaded += (_, _) => FormScroll.ScrollToTop();
+
         TestButton.Click += async (_, _) => await TestConnectionAsync();
         SaveButton.Click += (_, _) => Save();
         CancelButton.Click += (_, _) => DialogResult = false;
@@ -181,6 +185,12 @@ public partial class SettingsWindow : Window
         }
 
         HideError();
+
+        if (candidate.IsReservedByWindows)
+        {
+            // Not an error: the keyboard hook takes over, but the user should know the side effect.
+            TestResultText.Text = UiText.HotkeyWinSpaceNote;
+        }
 
         if (isPrimary)
         {

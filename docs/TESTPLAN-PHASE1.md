@@ -35,12 +35,14 @@ echten Fremdanwendungen sitzen muss.
 
 | # | Schritt | Erwartet |
 |---|---|---|
-| 2.1 | `Ctrl+Alt+Space` ohne Auswahl | kein Popup, kurzer Tray-Hinweis „Kein markierter Text gefunden." |
+| 2.1 | `Win+Leertaste` ohne Auswahl | kein Popup, kurzer Tray-Hinweis „Kein markierter Text gefunden." |
 | 2.2 | Hotkey in Einstellungen ändern, speichern | neue Kombination wirkt sofort, alte nicht mehr |
-| 2.3 | Als Hotkey `Win+Space` eingeben | wird abgelehnt mit Begründung |
+| 2.3 | Hotkey auf `Win+Leertaste` (Standard) | Popup öffnet; der Windows-Layout-Wechsel passiert **nicht** |
 | 2.4 | Hotkey ohne Zusatztaste (nur `F5`) | wird abgelehnt |
 | 2.5 | Belegte Kombination wählen (z. B. eine, die ein anderes Tool hat) | Meldung, dass sie belegt ist; Einstellungen öffnen sich erneut |
 | 2.6 | `Ctrl+Alt+R` | Popup öffnet; in Phase 1 Hinweis, dass *Korrigieren* verwendet wird |
+| 2.7 | Nach `Win+Leertaste` die Windows-Taste loslassen | Startmenü öffnet sich **nicht** |
+| 2.8 | Auf `Ctrl+Alt+Leertaste` umstellen | Layout-Wechsel mit Win+Leertaste funktioniert wieder |
 
 ## 3 Text abgreifen
 
@@ -63,7 +65,7 @@ Jeweils einen Satz mit Fehlern markieren, z. B.
 |---|---|---|
 | 3.7 | Bild in die Zwischenablage kopieren, dann Text korrigieren | Bild ist nach dem Vorgang noch in der Zwischenablage |
 | 3.8 | Text mit mehr als 5000 Zeichen markieren | kein Popup, Tray-Hinweis mit Zeichenzahl |
-| 3.9 | Hotkey drücken und `Ctrl+Alt` gedrückt halten | Text wird trotzdem korrekt gelesen (Modifier werden losgelassen) |
+| 3.9 | Hotkey drücken und die Zusatztaste gedrückt halten | Text wird trotzdem korrekt gelesen (Modifier werden losgelassen) |
 
 ## 4 Popup
 

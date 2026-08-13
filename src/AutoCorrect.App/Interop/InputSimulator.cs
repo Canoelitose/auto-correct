@@ -38,6 +38,22 @@ internal static class InputSimulator
         }
     }
 
+    /// <summary>
+    /// Sends a harmless key so Windows does not treat a held Windows key as a lone tap.
+    ///
+    /// When the keyboard hook swallows the second key of Win+Space, the shell never sees it and
+    /// would open the start menu once the Windows key is released. A Control tap in between
+    /// prevents that.
+    /// </summary>
+    public static void SendStartMenuBlocker()
+    {
+        Send(new[]
+        {
+            KeyDown(NativeMethods.VK_CONTROL),
+            KeyUp(NativeMethods.VK_CONTROL),
+        });
+    }
+
     /// <summary>Sends Ctrl + <paramref name="virtualKey"/> as a complete key sequence.</summary>
     public static void SendCtrlKey(ushort virtualKey)
     {

@@ -61,7 +61,7 @@ Die Anwendung startet ohne Fenster, nur als Icon im System-Tray.
 
 | Taste | Wirkung |
 |---|---|
-| `Ctrl + Alt + Space` | Popup mit korrigiertem Text an der Cursorposition |
+| `Win + Leertaste` | Popup mit korrigiertem Text an der Cursorposition |
 | `Ctrl + Alt + R` | direkt in den Modus *Umformulieren* (ab Phase 2) |
 | `Enter` | Ergebnis übernehmen und in die Ursprungsanwendung einfügen |
 | `Esc` | abbrechen und schliessen |
@@ -202,6 +202,10 @@ Weitere bewusste Entscheidungen sind in [docs/BUILD.md](docs/BUILD.md#entscheidu
   Anwendung kein `TextPattern` unterstützt, greift der Clipboard-Fallback, dessen Wartezeit
   von 80–120 ms technisch notwendig ist; dann sind es ca. 120–170 ms.
 - **Kein `ß`:** für deutsche Texte gilt `de-CH`, damit bleibt es bei Schweizer Rechtschreibung.
+- **Win+Leertaste** ist ab Werk der Hotkey. Windows benutzt die Kombination sonst für den
+  Tastaturlayout-Wechsel; AutoCorrect fängt sie über einen Low-Level-Tastaturhaken ab und
+  schluckt sie, der Layout-Wechsel entfällt dadurch. Wer ihn braucht, stellt in den
+  Einstellungen z. B. auf `Ctrl+Alt+Leertaste` um.
 - Der verarbeitete Text wird **nie** ins Protokoll geschrieben, nur seine Länge.
 
 ---
@@ -212,7 +216,7 @@ Weitere bewusste Entscheidungen sind in [docs/BUILD.md](docs/BUILD.md#entscheidu
 
 ```json
 {
-  "primaryHotkey": "Ctrl+Alt+Space",
+  "primaryHotkey": "Win+Space",
   "rephraseHotkey": "Ctrl+Alt+R",
   "startWithWindows": false,
   "languageToolEndpoint": "http://localhost:8081/v2/check",

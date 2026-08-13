@@ -142,6 +142,51 @@ public static class HotkeyTests
             Assert.True(manager.Register(hotkey, () => { }).Success, "the hotkey was not released");
         });
 
+        runner.Add("Hotkey: Win+Space is delivered through the keyboard hook", () =>
+        {
+            // RegisterHotKey cannot claim Win+Space because the shell owns it for the layout
+            // switcher, so the manager has to fall back to the low level keyboard hook.
+            using var window = new MessageWindow();
+            using var manager = new HotkeyManager(window);
+
+            var result = manager.Register(HotkeyDefinition.DefaultPrimary, () => { });
+
+            Assert.True(result.Success, $"Win+Space could not be registered: {result.Error}");
+            Assert.Equal(HotkeyMethod.KeyboardHook, result.Method);
+        });
+
+        runner.Add("Hotkey: an ordinary combination uses the normal system hotkey", () =>
+        {
+            using var window = new MessageWindow();
+            using var manager = new HotkeyManager(window);
+
+            var hotkey = new HotkeyDefinition(
+                HotkeyModifiers.Control | HotkeyModifiers.Alt | HotkeyModifiers.Shift,
+                VirtualKeys.TryGetCode("F7", out var f7) ? f7 : 0x76);
+
+            var result = manager.Register(hotkey, () => { });
+
+            Assert.True(result.Success, $"registration failed: {result.Error}");
+            Assert.Equal(HotkeyMethod.SystemHotkey, result.Method);
+        });
+
+        runner.Add("Hotkey: the keyboard hook is removed again on dispose", () =>
+        {
+            var window = new MessageWindow();
+            var manager = new HotkeyManager(window);
+
+            Assert.True(manager.Register(HotkeyDefinition.DefaultPrimary, () => { }).Success);
+
+            // A hook left behind would keep swallowing Win+Space for the whole session.
+            manager.Dispose();
+            window.Dispose();
+
+            using var second = new MessageWindow();
+            using var again = new HotkeyManager(second);
+            Assert.True(again.Register(HotkeyDefinition.DefaultPrimary, () => { }).Success,
+                "the hook could not be installed a second time");
+        });
+
         runner.Add("Hotkey: an invalid combination is rejected before touching Windows", () =>
         {
             using var window = new MessageWindow();

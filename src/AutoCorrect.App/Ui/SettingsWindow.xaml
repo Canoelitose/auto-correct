@@ -36,7 +36,7 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
+        <ScrollViewer x:Name="FormScroll" Grid.Row="0" VerticalScrollBarVisibility="Auto">
             <StackPanel>
                 <TextBlock x:Name="InterfaceLanguageLabel" Style="{StaticResource FieldLabel}" Margin="0,0,0,4" />
                 <ComboBox x:Name="InterfaceLanguageBox" Padding="6,5" />

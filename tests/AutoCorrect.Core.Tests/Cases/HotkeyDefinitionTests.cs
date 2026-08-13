@@ -6,7 +6,14 @@ public static class HotkeyDefinitionTests
 {
     public static void Register(TestRunner runner)
     {
-        runner.Add("Hotkey: parses the default combination", () =>
+        runner.Add("Hotkey: the default is Win+Space", () =>
+        {
+            Assert.Equal(HotkeyModifiers.Windows, HotkeyDefinition.DefaultPrimary.Modifiers);
+            Assert.Equal(VirtualKeys.Space, HotkeyDefinition.DefaultPrimary.VirtualKey);
+            Assert.Equal("Win+Space", HotkeyDefinition.DefaultPrimary.ToString());
+        });
+
+        runner.Add("Hotkey: parses a modifier combination", () =>
         {
             Assert.True(HotkeyDefinition.TryParse("Ctrl+Alt+Space", out var hotkey, out var error), error ?? "");
             Assert.Equal(HotkeyModifiers.Control | HotkeyModifiers.Alt, hotkey.Modifiers);
@@ -43,11 +50,21 @@ public static class HotkeyDefinitionTests
             Assert.NotNull(error);
         });
 
-        runner.Add("Hotkey: rejects Win+Space, which Windows uses for the layout switch", () =>
+        runner.Add("Hotkey: accepts Win+Space and marks it as claimed by Windows", () =>
         {
-            Assert.False(HotkeyDefinition.TryParse("Win+Space", out _, out var error));
-            Assert.NotNull(error);
-            Assert.Contains("Win+Space", error!);
+            // Windows owns this combination, so RegisterHotKey cannot take it. The application
+            // falls back to a keyboard hook, which is why it is allowed here.
+            Assert.True(HotkeyDefinition.TryParse("Win+Space", out var hotkey, out var error), error ?? "");
+            Assert.True(hotkey.IsReservedByWindows, "Win+Space must be marked as reserved");
+        });
+
+        runner.Add("Hotkey: ordinary combinations are not marked as reserved", () =>
+        {
+            Assert.True(HotkeyDefinition.TryParse("Ctrl+Alt+Space", out var ctrlAlt, out _));
+            Assert.False(ctrlAlt.IsReservedByWindows);
+
+            Assert.True(HotkeyDefinition.TryParse("Win+Q", out var winQ, out _));
+            Assert.False(winQ.IsReservedByWindows);
         });
 
         runner.Add("Hotkey: rejects unknown keys", () =>
@@ -73,6 +90,7 @@ public static class HotkeyDefinitionTests
         {
             var parsed = HotkeyDefinition.ParseOrDefault("nonsense", HotkeyDefinition.DefaultPrimary);
             Assert.Equal(HotkeyDefinition.DefaultPrimary, parsed);
+            Assert.Equal("Win+Space", parsed.ToString());
         });
 
         runner.Add("Hotkey: German key aliases are accepted", () =>

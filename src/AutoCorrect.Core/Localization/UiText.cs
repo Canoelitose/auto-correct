@@ -150,8 +150,8 @@ public static class UiText
     public static string SettingsHotkeyRephrase => T("Hotkey Umformulieren", "Hotkey for rephrasing");
 
     public static string SettingsHotkeyHint => T(
-        "Feld anklicken und die gewünschte Tastenkombination drücken.",
-        "Click the field and press the key combination you want.");
+        "Feld anklicken und die gewünschte Tastenkombination drücken. Standard ist Win+Leertaste.",
+        "Click the field and press the key combination you want. The default is Win+Space.");
 
     public static string SettingsClear => T("Löschen", "Clear");
 
@@ -245,9 +245,11 @@ public static class UiText
         "Der Tastenkombination fehlt eine Haupttaste.",
         "The key combination is missing a main key.");
 
-    public static string HotkeyWinSpaceReserved => T(
-        "Win+Space ist von Windows für den Tastaturlayout-Wechsel belegt und kann nicht verwendet werden.",
-        "Win+Space is reserved by Windows for switching the keyboard layout and cannot be used.");
+    public static string HotkeyWinSpaceNote => T(
+        "Win+Space ist eigentlich für den Windows-Layout-Wechsel belegt. AutoCorrect fängt die " +
+        "Kombination über einen Tastaturhaken ab, der Layout-Wechsel entfällt dadurch.",
+        "Win+Space is normally used by the Windows layout switcher. AutoCorrect intercepts the " +
+        "combination through a keyboard hook, which disables the layout switch.");
 
     public static string HotkeyRegistrationFailed(string hotkey) => T(
         $"Der Hotkey \"{hotkey}\" ist bereits von einer anderen Anwendung belegt.\n\n" +
