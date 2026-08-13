@@ -84,16 +84,45 @@ Ctrl-Tipp verhindert das.
 `InputSimulator.ReleaseHeldModifiers()` schickt deshalb zuerst Key-Up für alles, was laut
 `GetAsyncKeyState` noch unten ist.
 
-## Wo Phase 2 und 3 andocken
+## Phase 2: das Sprachmodell
+
+| Teil | Ort |
+|---|---|
+| LLM-Engine mit Streaming | `Core/Engines/Llm/LlmEngine.cs`, registriert in `EngineFactory` |
+| Prompts als Konstanten | `Core/Engines/Llm/Prompts.cs` |
+| Aufräumen der Modellantwort | `Core/Engines/Llm/ResponseFilter.cs` |
+| SQLite-Cache | `Core/Caching/ResultCache.cs`, an die LLM-Engine übergeben |
+| Token-Puffer im UI | `PopupWindow`, 30-ms-`DispatcherTimer` |
+| Abbruch bei Moduswechsel | `CancelRunning()` in `PopupWindow` |
+
+**Warum eine eigene Schnittstelle statt Ollama-API.** Gesprochen wird `POST /v1/chat/completions`
+mit `"stream": true`, also die OpenAI-kompatible Schnittstelle. Ollama, llama.cpp und LM Studio
+bieten sie alle an; damit hängt nichts im Code an einem bestimmten Server.
+
+**Warum der Cache in der Engine und nicht als Dekorator.** Der Schlüssel ist SHA-256 über Text,
+Modus **und** Modellname. Ein Dekorator über `ITextEngine` kennt den Modellnamen nicht und würde
+nach einem Modellwechsel die alten Antworten weiterreichen. Rechtschreibkorrektur profitiert
+ohnehin nicht davon: sie dauert Millisekunden.
+
+**Warum die Antwort gefiltert wird.** Kleine Instruct-Modelle stellen der Antwort trotz
+gegenteiliger Anweisung eine Zeile wie „Hier ist die umformulierte Version:" voran oder setzen
+alles in Anführungszeichen. Das landete sonst im Dokument des Benutzers. `ResponseFilter`
+entfernt genau diese Muster und lässt im Zweifel alles stehen. Er arbeitet auf dem Strom: der
+Anfang wird nur so lange zurückgehalten, wie er noch ein Artefakt werden könnte – meist wenige
+Zeichen. Eine Antwort, die mit einem Anführungszeichen beginnt, ist der Sonderfall: ob es
+Verpackung oder Text ist, zeigt sich erst am Schluss, deshalb wird sie ganz gepuffert.
+
+**Warum der Zeitpunkt des Timeouts umgestellt wird.** Die zwei Minuten gelten nur bis zum ersten
+Token, weil ein kaltes Modell erst geladen werden muss. Danach wird der Timer abgeschaltet
+(`CancelAfter(Timeout.InfiniteTimeSpan)`), sonst würde er mitten in einer langen Antwort die
+Anfrage abbrechen, zu der der offene Strom gehört.
+
+## Wo Phase 3 andockt
 
 | Vorhaben | Ort |
 |---|---|
-| LLM-Engine mit Streaming | neue `ITextEngine` in `Core/Engines/`, Registrierung in `EngineFactory` |
-| Token-Puffer im UI | steht schon: `PopupWindow`, 30-ms-`DispatcherTimer` |
-| Abbruch bei Moduswechsel | steht schon: `CancelRunning()` in `PopupWindow` |
-| Prompts als Konstanten | neue Klasse neben `Core/Localization/UiText.cs` |
-| SQLite-Cache | neuer Dekorator um `ITextEngine`, dann greift er für jede Engine |
 | Fähigkeitsprüfung | neue Klasse in `App`, Ergebnis steuert die Reihenfolge im `EngineRouter` |
+| Server-Engine vor dem lokalen Modell | weitere `ITextEngine`, davor in `EngineFactory` einhängen |
 | Fallback-Anzeige in der Statuszeile | `PopupWindow.SetStatus()` zeigt bereits `Engine · Modus · Zustand` |
 
 ## Regeln, die im Code eingehalten werden

@@ -1,0 +1,143 @@
+# Lokales Sprachmodell einrichten (Phase 2)
+
+Für *Korrigieren* brauchst du das hier **nicht** – das erledigen die Windows-Rechtschreibprüfung
+und LanguageTool. Das Sprachmodell ist für die drei Modi zuständig, die den Text wirklich
+umschreiben:
+
+| Modus | Was er macht |
+|---|---|
+| Umformulieren | gleicher Inhalt, natürlichere Formulierung |
+| Förmlich | höflicher und formeller, für Mails und Briefe |
+| Kürzen | deutlich kürzer, ohne Inhalt zu verlieren |
+
+Ohne Modell bleiben die drei Schaltflächen im Popup anklickbar, melden aber, dass kein Modell
+läuft, und sagen, wie man es nachholt. Alles läuft auf deinem Rechner, es gehen weiterhin keine
+Daten an externe Dienste.
+
+---
+
+## Der schnelle Weg: Ollama
+
+### 1. Ollama installieren
+
+[ollama.com/download](https://ollama.com/download) herunterladen und installieren. Ollama läuft
+danach als Dienst im Hintergrund und hört auf `http://localhost:11434`.
+
+### 2. Modell holen
+
+```powershell
+ollama pull qwen2.5:3b-instruct-q4_K_M
+```
+
+Das sind knapp 2 GB, einmalig. Danach:
+
+```powershell
+ollama run qwen2.5:3b-instruct-q4_K_M "Formuliere um: Das Meeting ist am Montag."
+```
+
+Kommt eine sinnvolle Antwort, ist alles bereit. AutoCorrect braucht keine weitere Einstellung –
+Adresse und Modellname stehen bereits als Standard drin.
+
+### 3. Prüfen
+
+Tray-Icon → *Einstellungen*. Unter *Adresse des Sprachmodells* muss
+`http://localhost:11434/v1` stehen, unter *Modell* der Name aus Schritt 2.
+
+Dann Text markieren, `Win + Leertaste`, im Popup auf *Umformulieren* klicken.
+
+---
+
+## Welches Modell?
+
+Gemessen wird, was zählt: wie lange es dauert, bis das erste Wort im Popup steht, und ob das
+Ergebnis auf Deutsch brauchbar ist.
+
+| Modell | Grösse | Braucht | Taugt für |
+|---|---|---|---|
+| `qwen2.5:3b-instruct-q4_K_M` | ca. 2 GB | ca. 3 GB RAM | Standard. Schnell genug auf einer CPU, Deutsch solide. |
+| `qwen2.5:7b-instruct-q4_K_M` | ca. 4.7 GB | ca. 6 GB RAM | spürbar besseres Deutsch, ungefähr doppelte Wartezeit |
+| `llama3.1:8b-instruct-q4_K_M` | ca. 4.9 GB | ca. 6 GB RAM | Alternative, Englisch etwas stärker als Deutsch |
+| `qwen2.5:1.5b-instruct-q4_K_M` | ca. 1 GB | ca. 2 GB RAM | für schwache Rechner, Qualität merklich schlechter |
+
+Faustregel: mit Grafikkarte (ab 6 GB VRAM) das 7B-Modell, ohne Grafikkarte das 3B-Modell.
+Ollama nutzt eine vorhandene NVIDIA- oder AMD-Karte von selbst.
+
+Nach dem Wechsel den Namen in den Einstellungen eintragen – exakt so, wie `ollama list` ihn
+anzeigt.
+
+---
+
+## Warum dauert der erste Aufruf so lange?
+
+Ollama lädt das Modell erst beim ersten Aufruf in den Speicher. Das dauert je nach Rechner
+10–60 Sekunden; AutoCorrect wartet dafür bis zu zwei Minuten auf das erste Wort. Danach bleibt
+das Modell einige Minuten geladen und die Antwort beginnt in der Regel nach unter einer Sekunde.
+
+Damit das erste Mal nicht in den Arbeitsablauf fällt, kann man Ollama nach dem Anmelden einmal
+vorwärmen:
+
+```powershell
+# Aufgabenplanung → Aufgabe erstellen → Bei Anmeldung
+ollama run qwen2.5:3b-instruct-q4_K_M "warm" --keepalive 60m
+```
+
+`OLLAMA_KEEP_ALIVE=-1` als Umgebungsvariable hält das Modell dauerhaft geladen – bequem, kostet
+aber die ganze Zeit den Arbeitsspeicher.
+
+---
+
+## Zwischenspeicher
+
+Was das Modell einmal formuliert hat, landet in
+`%LOCALAPPDATA%\AutoCorrect\cache.db`. Dieselbe Anfrage wird danach sofort beantwortet, statt
+noch einmal generiert zu werden. Gespeichert werden maximal 5000 Einträge, die ältesten fallen
+heraus.
+
+Der Zwischenspeicher enthält deine Texte im Klartext. Er liegt bewusst unter `LOCALAPPDATA` und
+nicht unter `APPDATA`, damit er nicht mit einem servergespeicherten Profil mitwandert. Leeren
+kannst du ihn in den Einstellungen mit *Zwischenspeicher leeren* oder von Hand:
+
+```powershell
+Remove-Item "$env:LOCALAPPDATA\AutoCorrect\cache.db*" -Force
+```
+
+---
+
+## Andere Server statt Ollama
+
+AutoCorrect spricht die OpenAI-kompatible Schnittstelle (`POST /v1/chat/completions` mit
+`"stream": true`). Alles, was diese Schnittstelle anbietet, funktioniert – nur die Adresse in
+den Einstellungen anpassen.
+
+**llama.cpp:**
+
+```powershell
+llama-server --model qwen2.5-3b-instruct-q4_k_m.gguf --port 8080 --ctx-size 4096
+```
+
+Adresse: `http://localhost:8080/v1`
+
+**LM Studio:** Server starten (Standardport 1234), Adresse `http://localhost:1234/v1`.
+
+**Ein Modell im lokalen Netz**, zum Beispiel auf einem stärkeren Rechner im selben Haushalt:
+`http://192.168.1.20:11434/v1`. Das bleibt im Rahmen der Vorgabe – lokal beziehungsweise im
+lokalen Netz, nicht bei einem externen Dienst.
+
+---
+
+## Wenn es nicht geht
+
+| Meldung im Popup | Ursache | Abhilfe |
+|---|---|---|
+| *Das lokale Sprachmodell ist nicht erreichbar* | Ollama läuft nicht | `ollama serve`, oder Ollama neu starten |
+| *Das Modell "…" ist nicht geladen* | Name stimmt nicht | `ollama list` und den Namen exakt übernehmen |
+| *Das Sprachmodell hat nicht rechtzeitig geantwortet* | Modell lädt noch | nochmals versuchen, das zweite Mal ist schnell |
+
+Prüfen, ob der Server wirklich antwortet:
+
+```powershell
+curl http://localhost:11434/v1/models
+```
+
+Weitere Hinweise stehen im Protokoll unter `%LOCALAPPDATA%\AutoCorrect\logs`. Dort steht, was
+schiefging – der verarbeitete Text steht dort **nie**, nur seine Länge.

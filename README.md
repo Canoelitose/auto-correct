@@ -7,9 +7,10 @@ bzw. im lokalen Netz – es gehen keine Daten an externe Dienste.
 **Deutsch und Englisch in einer Exe** – Oberfläche umschaltbar, Textsprache wird automatisch
 erkannt.
 
-**Status: Phase 1 fertig.** Bei jedem Push laufen auf einem Windows-Rechner die Logik-,
-Sprach- und Windows-Tests, dazu ein Start der fertigen Exe. Phase 2 (lokales Sprachmodell mit
-Streaming) und Phase 3 (Fähigkeitsprüfung, Verteilung) sind vorbereitet, aber noch nicht
+**Status: Phase 1 und Phase 2 fertig.** Bei jedem Push laufen auf einem Windows-Rechner die
+Logik-, Sprach- und Windows-Tests, dazu ein Start der fertigen Exe. Phase 2 bringt das lokale
+Sprachmodell mit Streaming, die Modi *Umformulieren*, *Förmlich* und *Kürzen* sowie den
+Zwischenspeicher. Phase 3 (Fähigkeitsprüfung, Verteilung) ist vorbereitet, aber noch nicht
 implementiert.
 
 ---
@@ -20,8 +21,8 @@ implementiert.
 
 | Datei | Grösse | Voraussetzung |
 |---|---|---|
-| `AutoCorrect-<version>-win-x64.exe` | ca. 63 MB | keine – herunterladen und starten |
-| `AutoCorrect-<version>-win-x64-runtime-required.exe` | ca. 0.4 MB | .NET 8 Desktop Runtime |
+| `AutoCorrect-<version>-win-x64.exe` | ca. 64 MB | keine – herunterladen und starten |
+| `AutoCorrect-<version>-win-x64-runtime-required.exe` | ca. 2.4 MB | .NET 8 Desktop Runtime |
 
 Windows 10 (1809+) oder Windows 11, x64. Die Exe ist nicht signiert, deshalb meldet sich
 SmartScreen beim ersten Start: *Weitere Informationen* → *Trotzdem ausführen*.
@@ -43,13 +44,15 @@ oder in GitHub unter *Actions* → *Release* → *Run workflow* die Version eint
 Herunterladen, starten, Text markieren, `Win + Leertaste` – fertig. Die Rechtschreibprüfung
 von Windows wird direkt genutzt, es ist **keine Installation nötig**.
 
-LanguageTool ist die optionale Ausbaustufe: es findet zusätzlich Grammatik- und
-Zeichensetzungsfehler. Läuft es, wird es automatisch bevorzugt.
+LanguageTool und das Sprachmodell sind die optionalen Ausbaustufen. Läuft LanguageTool, wird es
+fürs Korrigieren automatisch bevorzugt; das Sprachmodell übernimmt die drei Modi, die den Text
+umschreiben.
 
-| Engine | Findet | Aufwand |
+| Engine | Kann | Aufwand |
 |---|---|---|
 | Windows-Rechtschreibprüfung | Rechtschreibung, Deutsch und Englisch | keiner, ist in Windows enthalten |
 | LanguageTool | zusätzlich Grammatik und Zeichensetzung | Java + Server starten |
+| Sprachmodell (Ollama) | Umformulieren, Förmlich, Kürzen | Ollama + Modell herunterladen |
 
 Welche Engine geantwortet hat, steht in der Statuszeile des Popups.
 
@@ -62,7 +65,16 @@ java -cp "languagetool-server.jar;libs/*" org.languagetool.server.HTTPServer --p
 
 Details und ein Autostart-Skript: [docs/SETUP-LANGUAGETOOL.md](docs/SETUP-LANGUAGETOOL.md)
 
-### 2. AutoCorrect bauen und starten
+### 2. Optional: Sprachmodell für Umformulieren, Förmlich und Kürzen
+
+```powershell
+# Ollama von ollama.com installieren, dann einmalig:
+ollama pull qwen2.5:3b-instruct-q4_K_M
+```
+
+Mehr dazu, inklusive Modellvergleich und llama.cpp: [docs/SETUP-OLLAMA.md](docs/SETUP-OLLAMA.md)
+
+### 3. AutoCorrect bauen und starten
 
 ```powershell
 dotnet run --project src/AutoCorrect.App
@@ -73,12 +85,12 @@ Begrüssungsfenster, danach läuft sie nur als Symbol im Infobereich der Tasklei
 versteckt neue Symbole hinter dem Pfeil `^` – von dort auf die Taskleiste ziehen, dann bleibt es
 sichtbar.
 
-### 3. Benutzen
+### 4. Benutzen
 
 | Taste | Wirkung |
 |---|---|
 | `Win + Leertaste` | Popup mit korrigiertem Text an der Cursorposition |
-| `Ctrl + Alt + R` | direkt in den Modus *Umformulieren* (ab Phase 2) |
+| `Ctrl + Alt + R` | direkt in den Modus *Umformulieren* |
 | `Enter` | Ergebnis übernehmen und in die Ursprungsanwendung einfügen |
 | `Esc` | abbrechen und schliessen |
 | `Ctrl + C` | Ergebnis nur kopieren |
@@ -146,7 +158,9 @@ AutoCorrect.sln
 │   ├── Engines/
 │   │   ├── ITextEngine.cs         das Interface, gegen das die gesamte UI arbeitet
 │   │   ├── EngineRouter.cs        verteilt Modi auf Engines (Ort der Phase-3-Fallbackkette)
-│   │   └── LanguageTool/          LanguageToolEngine, DTOs, CorrectionApplier
+│   │   ├── LanguageTool/          LanguageToolEngine, DTOs, CorrectionApplier
+│   │   └── Llm/                   LlmEngine (OpenAI-kompatibel, Streaming), Prompts
+│   ├── Caching/ResultCache.cs     SQLite-Zwischenspeicher unter %LOCALAPPDATA%
 │   ├── Configuration/             AppSettings, SettingsStore, HotkeyDefinition, VirtualKeys
 │   ├── Diagnostics/               FileLogger (rotierend), Log
 │   └── Localization/UiText.cs     alle deutschen Texte an einer Stelle

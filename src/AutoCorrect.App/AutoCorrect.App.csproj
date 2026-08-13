@@ -14,10 +14,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>AutoCorrect.App</RootNamespace>
     <AssemblyName>AutoCorrect</AssemblyName>
-    <Version>1.2.2</Version>
-    <FileVersion>1.2.2.0</FileVersion>
-    <AssemblyVersion>1.2.2.0</AssemblyVersion>
-    <InformationalVersion>1.2.2</InformationalVersion>
+    <Version>1.3.0</Version>
+    <FileVersion>1.3.0.0</FileVersion>
+    <AssemblyVersion>1.3.0.0</AssemblyVersion>
+    <InformationalVersion>1.3.0</InformationalVersion>
     <Product>AutoCorrect</Product>
     <Company>AutoCorrect</Company>
     <Authors>AutoCorrect</Authors>
@@ -33,6 +33,10 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <!-- Keeps idle memory down: no extra background JIT threads for a tray application. -->
     <TieredPGO>true</TieredPGO>
+    <!-- The SQLite cache brings a native e_sqlite3.dll along. Without this it would be left
+         next to the executable, and a download of the single exe alone would silently lose
+         the cache. Only has an effect when PublishSingleFile is set. -->
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
   </PropertyGroup>
 
   <ItemGroup>

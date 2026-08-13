@@ -66,6 +66,20 @@
                 <TextBox x:Name="EndpointBox" Padding="6,5" />
                 <TextBlock x:Name="EndpointHint" Style="{StaticResource Hint}" />
 
+                <TextBlock x:Name="LlmEndpointLabel" Style="{StaticResource FieldLabel}" />
+                <TextBox x:Name="LlmEndpointBox" Padding="6,5" />
+                <TextBlock x:Name="LlmEndpointHint" Style="{StaticResource Hint}" />
+
+                <TextBlock x:Name="LlmModelLabel" Style="{StaticResource FieldLabel}" />
+                <TextBox x:Name="LlmModelBox" Padding="6,5" />
+                <TextBlock x:Name="LlmModelHint" Style="{StaticResource Hint}" />
+
+                <Button x:Name="ClearCacheButton"
+                        Margin="0,12,0,0"
+                        Padding="10,5"
+                        HorizontalAlignment="Left" />
+                <TextBlock x:Name="CacheHint" Style="{StaticResource Hint}" />
+
                 <CheckBox x:Name="AutoStartCheck" Margin="0,18,0,0" />
 
                 <CheckBox x:Name="UiAutomationCheck" Margin="0,10,0,0" />

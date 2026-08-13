@@ -91,6 +91,19 @@ jobs:
           -p:PublishSingleFile=true -p:DebugType=none
           -o publish/smoke
 
+      - name: Check the published output really is one file
+        shell: pwsh
+        run: |
+          # The SQLite cache brings a native e_sqlite3.dll along. Without
+          # IncludeNativeLibrariesForSelfExtract it would sit next to the exe, and the release
+          # ships only the exe - the cache would silently disappear for everyone who downloads.
+          $files = Get-ChildItem publish/smoke -File
+          $files | ForEach-Object { Write-Host "  $($_.Name)  $([math]::Round($_.Length/1MB, 2)) MB" }
+
+          if ($files.Count -ne 1 -or $files[0].Name -ne 'AutoCorrect.exe') {
+              throw "expected a single AutoCorrect.exe, found: $($files.Name -join ', ')"
+          }
+
       - name: Start the published application and check it survives
         shell: pwsh
         run: |

@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using AutoCorrect.Core.Diagnostics;
 using AutoCorrect.Core.Engines.LanguageTool;
+using AutoCorrect.Core.Engines.Llm;
 using AutoCorrect.Core.Localization;
 
 namespace AutoCorrect.Core.Configuration;
@@ -37,10 +38,10 @@ public sealed class AppSettings
     public string InterfaceLanguage { get; set; } = UiText.AutomaticSetting;
 
     /// <summary>Phase 2: OpenAI compatible base address (llama.cpp, Ollama, own API).</summary>
-    public string LlmEndpoint { get; set; } = "http://localhost:11434/v1";
+    public string LlmEndpoint { get; set; } = LlmEngine.DefaultEndpoint;
 
     /// <summary>Phase 2: model name passed to the OpenAI compatible endpoint.</summary>
-    public string LlmModel { get; set; } = "qwen2.5:3b-instruct-q4_K_M";
+    public string LlmModel { get; set; } = LlmEngine.DefaultModel;
 
     public LogLevel LogLevel { get; set; } = LogLevel.Warning;
 
@@ -93,6 +94,16 @@ public sealed class AppSettings
         if (string.IsNullOrWhiteSpace(InterfaceLanguage))
         {
             InterfaceLanguage = UiText.AutomaticSetting;
+        }
+
+        if (string.IsNullOrWhiteSpace(LlmEndpoint))
+        {
+            LlmEndpoint = LlmEngine.DefaultEndpoint;
+        }
+
+        if (string.IsNullOrWhiteSpace(LlmModel))
+        {
+            LlmModel = LlmEngine.DefaultModel;
         }
 
         if (!HotkeyDefinition.TryParse(PrimaryHotkey, out _, out _))

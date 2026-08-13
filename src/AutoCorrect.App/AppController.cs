@@ -9,6 +9,7 @@ using AutoCorrect.App.Interop;
 using AutoCorrect.App.Startup;
 using AutoCorrect.App.Tray;
 using AutoCorrect.App.Ui;
+using AutoCorrect.Core.Caching;
 using AutoCorrect.Core.Configuration;
 using AutoCorrect.Core.Diagnostics;
 using AutoCorrect.Core.Engines;
@@ -28,6 +29,7 @@ public sealed class AppController : IDisposable
     private readonly TrayIcon _tray;
     private readonly SelectionCapture _capture = new();
     private readonly TextInjector _injector = new();
+    private readonly ResultCache _cache = new();
     private readonly EngineRouter _engine;
 
     private PopupWindow _popup;
@@ -54,7 +56,7 @@ public sealed class AppController : IDisposable
             Timeout = Timeout.InfiniteTimeSpan, // cancellation is handled per request
         };
 
-        _engine = EngineFactory.CreateRouter(_http, () => _settings);
+        _engine = EngineFactory.CreateRouter(_http, () => _settings, _cache);
 
         _messageWindow = new MessageWindow();
         _hotkeys = new HotkeyManager(_messageWindow);
@@ -400,7 +402,7 @@ public sealed class AppController : IDisposable
 
         _popup.EndSession();
 
-        var window = new SettingsWindow(_settings, EngineFactory.ProbeAsync)
+        var window = new SettingsWindow(_settings, EngineFactory.ProbeAsync, _cache)
         {
             Topmost = true,
         };
@@ -503,5 +505,6 @@ public sealed class AppController : IDisposable
         _hotkeys.Dispose();
         _messageWindow.Dispose();
         _http.Dispose();
+        _cache.Dispose();
     }
 }

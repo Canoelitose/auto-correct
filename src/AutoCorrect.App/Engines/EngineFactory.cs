@@ -1,7 +1,9 @@
 using System.Net.Http;
+using AutoCorrect.Core.Caching;
 using AutoCorrect.Core.Configuration;
 using AutoCorrect.Core.Engines;
 using AutoCorrect.Core.Engines.LanguageTool;
+using AutoCorrect.Core.Engines.Llm;
 
 namespace AutoCorrect.App.Engines;
 
@@ -13,7 +15,8 @@ namespace AutoCorrect.App.Engines;
 /// </summary>
 internal static class EngineFactory
 {
-    public static EngineRouter CreateRouter(HttpClient http, Func<AppSettings> settings)
+    /// <param name="cache">Optional result cache for the language model. Null disables it.</param>
+    public static EngineRouter CreateRouter(HttpClient http, Func<AppSettings> settings, ResultCache? cache = null)
     {
         ArgumentNullException.ThrowIfNull(http);
         ArgumentNullException.ThrowIfNull(settings);
@@ -23,7 +26,8 @@ internal static class EngineFactory
         // a fresh download without any server.
         return new EngineRouter(
             new LanguageToolEngine(http, settings),
-            new WindowsSpellCheckEngine(settings));
+            new WindowsSpellCheckEngine(settings),
+            new LlmEngine(http, settings, cache));
     }
 
     /// <summary>

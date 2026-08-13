@@ -8,6 +8,9 @@ HotkeyDefinitionTests.Register(runner);
 SettingsStoreTests.Register(runner);
 LanguageToolEngineTests.Register(runner);
 EngineRouterTests.Register(runner);
+LlmEngineTests.Register(runner);
+ResponseFilterTests.Register(runner);
+ResultCacheTests.Register(runner);
 LoggingTests.Register(runner);
 LocalizationTests.Register(runner);
 
@@ -15,7 +18,14 @@ LocalizationTests.Register(runner);
 if (LanguageToolIntegrationTests.IsEnabled)
 {
     LanguageToolIntegrationTests.Register(runner);
-    Console.WriteLine($"Integration tests enabled against {Environment.GetEnvironmentVariable(LanguageToolIntegrationTests.EndpointVariable)}");
+    Console.WriteLine($"LanguageTool integration tests enabled against {Environment.GetEnvironmentVariable(LanguageToolIntegrationTests.EndpointVariable)}");
+}
+
+// The same for AUTOCORRECT_LLM_ENDPOINT and a real Ollama or llama.cpp server.
+if (LlmIntegrationTests.IsEnabled)
+{
+    LlmIntegrationTests.Register(runner);
+    Console.WriteLine($"Model integration tests enabled against {Environment.GetEnvironmentVariable(LlmIntegrationTests.EndpointVariable)}");
 }
 
 Console.WriteLine("AutoCorrect.Core tests");

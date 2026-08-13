@@ -53,9 +53,10 @@ function Publish-Variant {
         '-p:DebugType=none'
     )
 
+    # IncludeNativeLibrariesForSelfExtract is set in the project file: both variants carry the
+    # native SQLite library and both must ship as one file.
     if ($SelfContained) {
         $arguments += '-p:EnableCompressionInSingleFile=true'
-        $arguments += '-p:IncludeNativeLibrariesForSelfExtract=true'
     }
 
     dotnet @arguments

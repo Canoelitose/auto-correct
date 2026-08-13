@@ -203,6 +203,29 @@ public static class UiText
         "Windows has no spell checking installed for this language. It can be added under " +
         "Settings → Time & language → Language, or you can set up LanguageTool.");
 
+    public static string LlmUnavailable => T(
+        "Das lokale Sprachmodell ist nicht erreichbar.\n\n" +
+        "Ollama installieren und das Modell laden:\n" +
+        "ollama pull qwen2.5:3b-instruct-q4_K_M\n\n" +
+        "Ollama läuft danach im Hintergrund. Adresse in den Einstellungen prüfen.",
+        "The local language model is not reachable.\n\n" +
+        "Install Ollama and pull the model:\n" +
+        "ollama pull qwen2.5:3b-instruct-q4_K_M\n\n" +
+        "Ollama then runs in the background. Check the address in the settings.");
+
+    public static string LlmTimeout => T(
+        "Das Sprachmodell hat nicht rechtzeitig geantwortet. Beim ersten Aufruf lädt das Modell, " +
+        "das kann eine Weile dauern – bitte nochmals versuchen.",
+        "The language model did not answer in time. The first call loads the model, which can " +
+        "take a while – please try again.");
+
+    public static string LlmModelMissing(string model) => T(
+        $"Das Modell \"{model}\" ist nicht geladen.\n\nMit diesem Befehl holen:\nollama pull {model}",
+        $"The model \"{model}\" is not loaded.\n\nGet it with:\nollama pull {model}");
+
+    /// <summary>Shown in the status line next to "Windows" and "LanguageTool".</summary>
+    public static string EngineLlmName => T("Sprachmodell", "Language model");
+
     public static string ModeNotSupported => T(
         "Für diesen Modus ist keine Engine verfügbar.",
         "No engine is available for this mode.");
@@ -247,6 +270,30 @@ public static class UiText
         "Standard: http://localhost:8081/v2/check",
         "Default: http://localhost:8081/v2/check");
 
+    public static string SettingsLlmEndpoint => T("Adresse des Sprachmodells", "Language model address");
+
+    public static string SettingsLlmEndpointHint => T(
+        "Standard: http://localhost:11434/v1 (Ollama). Wird nur für Umformulieren, Förmlich und " +
+        "Kürzen gebraucht; Korrigieren läuft ohne.",
+        "Default: http://localhost:11434/v1 (Ollama). Only needed for rephrasing, formal wording " +
+        "and shortening; correcting works without it.");
+
+    public static string SettingsLlmModel => T("Modell", "Model");
+
+    public static string SettingsLlmModelHint => T(
+        "Empfohlen: qwen2.5:3b-instruct-q4_K_M. Einmalig holen mit: ollama pull qwen2.5:3b-instruct-q4_K_M",
+        "Recommended: qwen2.5:3b-instruct-q4_K_M. Fetch it once with: ollama pull qwen2.5:3b-instruct-q4_K_M");
+
+    public static string SettingsClearCache => T("Zwischenspeicher leeren", "Clear cache");
+
+    public static string SettingsCacheHint(long entries) => T(
+        $"Bereits umformulierte Texte werden lokal gespeichert ({entries} Einträge), damit die " +
+        "gleiche Anfrage sofort beantwortet wird.",
+        $"Texts that were already rephrased are stored locally ({entries} entries) so the same " +
+        "request is answered instantly.");
+
+    public static string SettingsCacheCleared => T("Zwischenspeicher geleert.", "Cache cleared.");
+
     public static string SettingsUiAutomation => T(
         "Text zuerst über UI Automation lesen (empfohlen)",
         "Read text through UI Automation first (recommended)");
@@ -272,6 +319,10 @@ public static class UiText
     public static string EndpointInvalid => T(
         "Die LanguageTool-Adresse muss eine vollständige http- oder https-Adresse sein.",
         "The LanguageTool address must be a complete http or https address.");
+
+    public static string LlmEndpointInvalid => T(
+        "Die Adresse des Sprachmodells muss eine vollständige http- oder https-Adresse sein.",
+        "The language model address must be a complete http or https address.");
 
     public static string HotkeysIdentical => T(
         "Die beiden Hotkeys dürfen nicht identisch sein.",

@@ -59,12 +59,12 @@ pwsh build/publish.ps1 -Target Both -Test
 
 | Variante | Grösse (gemessen) | Voraussetzung auf dem Zielgerät |
 |---|---|---|
-| `client-framework-dependent` | **0.4 MB**, eine Exe | .NET 8 Desktop Runtime |
-| `client-self-contained` | **68 MB** | keine |
+| `client-framework-dependent` | **2.4 MB**, eine Exe | .NET 8 Desktop Runtime |
+| `client-self-contained` | **67 MB** | keine |
 
 Die Runtime lässt sich per `winget install Microsoft.DotNet.DesktopRuntime.8` oder über
 Intune verteilen. In einer verwalteten Umgebung ist die framework-abhängige Variante fast
-immer die bessere Wahl: die Runtime wird einmal verteilt, der Client bleibt bei 0.4 MB.
+immer die bessere Wahl: die Runtime wird einmal verteilt, der Client bleibt bei 2.4 MB.
 
 ## Entscheidungen
 
@@ -82,7 +82,7 @@ Es gibt eine undokumentierte Möglichkeit, den Fehler zu unterdrücken, aber WPF
 erst in einem selten benutzten Dialog. Deshalb ist Trimming hier nicht gesetzt.
 
 **Folge für die Zielgrösse:** die geforderten < 40 MB sind self-contained nicht erreichbar.
-Framework-abhängig sind es 0.4 MB, also weit darunter.
+Framework-abhängig sind es 2.4 MB, also weit darunter.
 
 ### Kein Windows Forms für das Tray-Icon
 
@@ -91,11 +91,17 @@ WinForms-Bibliothek in den Prozess. Das Tray-Icon ist stattdessen direkt gegen
 `Shell_NotifyIcon` implementiert (`src/AutoCorrect.App/Tray/`). Das spart Speicher im
 Leerlauf und hält die Abhängigkeiten bei „nur WPF".
 
-### Keine externen NuGet-Pakete
+### Nur die beiden erlaubten NuGet-Pakete
 
 Der gesamte Code kommt mit dem aus, was in .NET 8 enthalten ist. `System.Text.Json` ist
-in-box, `Microsoft.Win32.Registry` ebenfalls. `Microsoft.Data.Sqlite` wird erst in Phase 2
-für den Cache gebraucht und ist noch nicht referenziert.
+in-box, `Microsoft.Win32.Registry` ebenfalls. Dazu kommt seit Phase 2 genau ein Paket:
+
+| Paket | Wofür | Wo |
+|---|---|---|
+| `Microsoft.Data.Sqlite` 8.0.10 | Zwischenspeicher der Modellantworten | `AutoCorrect.Core` |
+
+Es zieht `SQLitePCLRaw` und die native `e_sqlite3.dll` nach – zusammen rund 1.6 MB im Paket.
+Mehr ist nicht dazugekommen; die Test-Projekte haben weiterhin keine NuGet-Abhängigkeit.
 
 ### Positionierung über SetWindowPos statt Window.Left/Top
 

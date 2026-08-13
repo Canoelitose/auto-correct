@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Input;
+using AutoCorrect.Core.Caching;
 using AutoCorrect.Core.Configuration;
 using AutoCorrect.Core.Localization;
 
@@ -17,13 +18,20 @@ public partial class SettingsWindow : Window
     /// </summary>
     private readonly Func<AppSettings, CancellationToken, Task<bool>> _probe;
 
+    /// <summary>Shared with the running engines, so clearing takes effect immediately.</summary>
+    private readonly ResultCache? _cache;
+
     private HotkeyDefinition _primaryHotkey;
     private HotkeyDefinition? _rephraseHotkey;
 
-    public SettingsWindow(AppSettings settings, Func<AppSettings, CancellationToken, Task<bool>> probe)
+    public SettingsWindow(
+        AppSettings settings,
+        Func<AppSettings, CancellationToken, Task<bool>> probe,
+        ResultCache? cache = null)
     {
         ArgumentNullException.ThrowIfNull(settings);
         _probe = probe ?? throw new ArgumentNullException(nameof(probe));
+        _cache = cache;
 
         InitializeComponent();
 
@@ -36,6 +44,8 @@ public partial class SettingsWindow : Window
         PrimaryHotkeyBox.Text = _primaryHotkey.ToString();
         RephraseHotkeyBox.Text = _rephraseHotkey?.ToString() ?? string.Empty;
         EndpointBox.Text = UpdatedSettings.LanguageToolEndpoint;
+        LlmEndpointBox.Text = UpdatedSettings.LlmEndpoint;
+        LlmModelBox.Text = UpdatedSettings.LlmModel;
         AutoStartCheck.IsChecked = UpdatedSettings.StartWithWindows;
         UiAutomationCheck.IsChecked = UpdatedSettings.PreferUiAutomation;
 
@@ -58,6 +68,12 @@ public partial class SettingsWindow : Window
         // brings it into view - which pushes the heading above it out of sight.
         Loaded += (_, _) => FormScroll.ScrollToTop();
 
+        ClearCacheButton.Click += (_, _) =>
+        {
+            _cache?.Clear();
+            CacheHint.Text = UiText.SettingsCacheCleared;
+        };
+
         TestButton.Click += async (_, _) => await TestConnectionAsync();
         SaveButton.Click += (_, _) => Save();
         CancelButton.Click += (_, _) => DialogResult = false;
@@ -78,6 +94,12 @@ public partial class SettingsWindow : Window
         ClearRephraseButton.Content = UiText.SettingsClear;
         EndpointLabel.Text = UiText.SettingsLanguageTool;
         EndpointHint.Text = UiText.SettingsLanguageToolHint;
+        LlmEndpointLabel.Text = UiText.SettingsLlmEndpoint;
+        LlmEndpointHint.Text = UiText.SettingsLlmEndpointHint;
+        LlmModelLabel.Text = UiText.SettingsLlmModel;
+        LlmModelHint.Text = UiText.SettingsLlmModelHint;
+        ClearCacheButton.Content = UiText.SettingsClearCache;
+        CacheHint.Text = UiText.SettingsCacheHint(_cache?.Count() ?? 0);
         AutoStartCheck.Content = UiText.TrayStartWithWindows;
         UiAutomationCheck.Content = UiText.SettingsUiAutomation;
         UiAutomationHint.Text = UiText.SettingsUiAutomationHint;
@@ -241,10 +263,16 @@ public partial class SettingsWindow : Window
     private void Save()
     {
         var endpoint = EndpointBox.Text.Trim();
-        if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var uri) ||
-            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        if (!IsHttpAddress(endpoint))
         {
             ShowError(UiText.EndpointInvalid);
+            return;
+        }
+
+        var llmEndpoint = LlmEndpointBox.Text.Trim();
+        if (!IsHttpAddress(llmEndpoint))
+        {
+            ShowError(UiText.LlmEndpointInvalid);
             return;
         }
 
@@ -264,6 +292,8 @@ public partial class SettingsWindow : Window
         UpdatedSettings.PrimaryHotkey = _primaryHotkey.ToString();
         UpdatedSettings.RephraseHotkey = _rephraseHotkey?.ToString() ?? string.Empty;
         UpdatedSettings.LanguageToolEndpoint = endpoint;
+        UpdatedSettings.LlmEndpoint = llmEndpoint;
+        UpdatedSettings.LlmModel = LlmModelBox.Text.Trim();
         UpdatedSettings.StartWithWindows = AutoStartCheck.IsChecked == true;
         UpdatedSettings.PreferUiAutomation = UiAutomationCheck.IsChecked == true;
 
@@ -281,6 +311,10 @@ public partial class SettingsWindow : Window
 
         DialogResult = true;
     }
+
+    private static bool IsHttpAddress(string value) =>
+        Uri.TryCreate(value, UriKind.Absolute, out var uri) &&
+        (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
 
     private void ShowError(string message)
     {

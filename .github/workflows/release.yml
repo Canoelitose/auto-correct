@@ -55,7 +55,6 @@ jobs:
           -c Release -r win-x64 --self-contained true
           -p:PublishSingleFile=true
           -p:EnableCompressionInSingleFile=true
-          -p:IncludeNativeLibrariesForSelfExtract=true
           -p:DebugType=none
           -o publish/self-contained
 
@@ -82,6 +81,15 @@ jobs:
           if (-not $tag) { throw 'No tag could be determined for this run.' }
           Write-Host "Release tag: $tag"
           "TAG=$tag" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+          # Both variants have to be a single file: the release ships the exe and nothing
+          # else, so a native library left beside it would simply be missing for everyone.
+          foreach ($variant in 'self-contained', 'framework-dependent') {
+              $files = Get-ChildItem "publish/$variant" -File
+              if ($files.Count -ne 1 -or $files[0].Name -ne 'AutoCorrect.exe') {
+                  throw "$variant is not a single file: $($files.Name -join ', ')"
+              }
+          }
 
           New-Item -ItemType Directory -Force -Path dist | Out-Null
           Copy-Item publish/self-contained/AutoCorrect.exe      "dist/AutoCorrect-$tag-win-x64.exe"
@@ -117,8 +125,8 @@ jobs:
 
             | Datei | Grösse | Voraussetzung |
             |---|---|---|
-            | `AutoCorrect-${{ env.TAG }}-win-x64.exe` | ca. 63 MB | keine – einfach starten |
-            | `AutoCorrect-${{ env.TAG }}-win-x64-runtime-required.exe` | ca. 0.4 MB | .NET 8 Desktop Runtime |
+            | `AutoCorrect-${{ env.TAG }}-win-x64.exe` | ca. 64 MB | keine – einfach starten |
+            | `AutoCorrect-${{ env.TAG }}-win-x64-runtime-required.exe` | ca. 2.4 MB | .NET 8 Desktop Runtime |
 
             Windows 10 (1809+) oder Windows 11, x64.
 
@@ -150,6 +158,19 @@ jobs:
 
             Anleitung: [docs/SETUP-LANGUAGETOOL.md](https://github.com/${{ github.repository }}/blob/${{ env.TAG }}/docs/SETUP-LANGUAGETOOL.md)
 
+            ## Optional: Sprachmodell zum Umformulieren
+
+            Für *Umformulieren*, *Förmlich* und *Kürzen* braucht es ein lokales Sprachmodell.
+            Ollama installieren, einmalig das Modell holen, fertig – AutoCorrect findet es von
+            selbst:
+
+            ```powershell
+            ollama pull qwen2.5:3b-instruct-q4_K_M
+            ```
+
+            Es läuft auf deinem Rechner, es gehen weiterhin keine Daten an externe Dienste.
+            Anleitung inklusive Modellvergleich: [docs/SETUP-OLLAMA.md](https://github.com/${{ github.repository }}/blob/${{ env.TAG }}/docs/SETUP-OLLAMA.md)
+
             ## Benutzen
 
             **Wichtig:** AutoCorrect hat kein eigenes Fenster. Nach dem Start erscheint beim
@@ -161,6 +182,7 @@ jobs:
             | Taste | Wirkung |
             |---|---|
             | `Win + Leertaste` | Text markieren, Hotkey drücken, Popup mit der Korrektur erscheint |
+            | `Ctrl + Alt + R` | direkt in den Modus *Umformulieren* |
             | `Enter` | Ergebnis übernehmen und einfügen |
             | `Esc` | abbrechen |
             | `Ctrl + C` | Ergebnis nur kopieren |
