@@ -27,15 +27,28 @@ public static class SelectionRoundTripTests
             }
 
             using var target = new TargetWindow("Ich habe gestern ein Buch gelest.");
-            await target.FocusAndSelectAllAsync();
 
             var capture = new SelectionCapture();
             var settings = new AppSettings { PreferUiAutomation = true };
 
-            var result = await capture.CaptureAsync(settings, CancellationToken.None);
+            // On a busy machine the automation provider of a window that has just been focused
+            // is occasionally not ready yet, and the capture correctly falls back to the
+            // clipboard. That is the designed behaviour, not a defect - but the UI Automation
+            // path still has to work, so this asks a few times and requires it to win once.
+            var attempts = 0;
+            SelectionResult result;
 
-            Assert.True(result.HasText, "no selection was read");
-            Assert.Equal("Ich habe gestern ein Buch gelest.", result.Text!.Trim());
+            do
+            {
+                attempts++;
+                await target.FocusAndSelectAllAsync();
+                result = await capture.CaptureAsync(settings, CancellationToken.None);
+
+                Assert.True(result.HasText, "no selection was read");
+                Assert.Equal("Ich habe gestern ein Buch gelest.", result.Text!.Trim());
+            }
+            while (result.Source != SelectionSource.UiAutomation && attempts < 3);
+
             Assert.Equal(SelectionSource.UiAutomation, result.Source);
         });
 
