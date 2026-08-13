@@ -55,7 +55,10 @@ Details und ein Autostart-Skript: [docs/SETUP-LANGUAGETOOL.md](docs/SETUP-LANGUA
 dotnet run --project src/AutoCorrect.App
 ```
 
-Die Anwendung startet ohne Fenster, nur als Icon im System-Tray.
+Die Anwendung hat **kein eigenes Fenster**. Beim ersten Start erscheint ein kurzes
+Begrüssungsfenster, danach läuft sie nur als Symbol im Infobereich der Taskleiste. Windows 11
+versteckt neue Symbole hinter dem Pfeil `^` – von dort auf die Taskleiste ziehen, dann bleibt es
+sichtbar.
 
 ### 3. Benutzen
 

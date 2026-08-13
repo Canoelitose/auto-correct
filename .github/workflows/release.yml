@@ -146,7 +146,11 @@ jobs:
 
             ## Benutzen
 
-            Die Anwendung startet ohne Fenster, nur als Icon im System-Tray.
+            **Wichtig:** AutoCorrect hat kein eigenes Fenster. Nach dem Start erscheint beim
+            ersten Mal ein kurzes Begrüssungsfenster, danach läuft es nur noch als Symbol im
+            Infobereich der Taskleiste (rechts unten neben der Uhr). Unter Windows 11 versteckt
+            Windows neue Symbole hinter dem Pfeil `^` – von dort lässt es sich auf die
+            Taskleiste ziehen.
 
             | Taste | Wirkung |
             |---|---|
