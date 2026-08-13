@@ -143,6 +143,45 @@ public static class AutoStartTests
     }
 }
 
+public static class UninstallTests
+{
+    public static void Register(TestRunner runner)
+    {
+        runner.Add("Uninstall: removes the autostart entry", () =>
+        {
+            var wasEnabled = AutoStartManager.IsEnabled();
+
+            try
+            {
+                AutoStartManager.SetEnabled(true);
+                Assert.True(AutoStartManager.IsEnabled(), "precondition: autostart is set");
+
+                var result = Uninstaller.RemoveUserData();
+
+                Assert.False(AutoStartManager.IsEnabled(), "the autostart entry survived");
+                Assert.True(
+                    result.Removed.Any(r => r.Contains("Run", StringComparison.Ordinal)),
+                    "the removed autostart entry was not reported");
+            }
+            finally
+            {
+                AutoStartManager.SetEnabled(wasEnabled);
+            }
+        });
+
+        runner.Add("Uninstall: reports the folders it works on and never throws", () =>
+        {
+            // Runs even when nothing is there; a removal must not fail on a clean machine.
+            var result = Uninstaller.RemoveUserData();
+
+            Assert.NotNull(result.Removed);
+            Assert.NotNull(result.Failed);
+            Assert.Contains("AutoCorrect", Uninstaller.SettingsDirectory);
+            Assert.Contains("AutoCorrect", Uninstaller.LogDirectory);
+        });
+    }
+}
+
 public static class MessageWindowTests
 {
     public static void Register(TestRunner runner)

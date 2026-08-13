@@ -87,6 +87,26 @@ Rechtsklick auf das Tray-Icon: *Einstellungen*, *Über*, *Mit Windows starten*, 
 
 ---
 
+## Deinstallieren
+
+AutoCorrect ist eine einzelne Exe ohne Installer, es steht also nichts unter *Apps und Features*.
+
+**Der einfache Weg:** Rechtsklick aufs Tray-Symbol → *Deinstallieren …*. Das entfernt
+Einstellungen, Protokolle und den Autostart-Eintrag, beendet das Programm und öffnet den Ordner
+mit der Exe, damit du sie löschen kannst.
+
+**Von Hand**, falls das Programm nicht mehr startet:
+
+```powershell
+Remove-Item "$env:APPDATA\AutoCorrect", "$env:LOCALAPPDATA\AutoCorrect" -Recurse -Force -ErrorAction SilentlyContinue
+Remove-ItemProperty "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Name AutoCorrect -ErrorAction SilentlyContinue
+```
+
+Danach die `AutoCorrect.exe` löschen. Mehr hinterlässt das Programm nicht – keine Dienste, keine
+Treiber, nichts in `Program Files`.
+
+---
+
 ## Sprachen
 
 Beides steckt in derselben Exe, es gibt keine getrennten Sprachversionen.

@@ -165,6 +165,13 @@ jobs:
             | `Esc` | abbrechen |
             | `Ctrl + C` | Ergebnis nur kopieren |
 
+            ## Deinstallieren
+
+            Rechtsklick aufs Tray-Symbol → *Deinstallieren …*. Entfernt Einstellungen,
+            Protokolle und den Autostart-Eintrag und zeigt dir, wo die Exe liegt. Es gibt keinen
+            Installer und keinen Eintrag unter *Apps und Features* – mehr als diese Exe und zwei
+            Ordner in `%APPDATA%` und `%LOCALAPPDATA%` gibt es nicht.
+
             ## Hinweise
 
             - `Win + Leertaste` ist ab Werk der Hotkey. Windows benutzt die Kombination sonst

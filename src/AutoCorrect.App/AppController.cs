@@ -330,11 +330,44 @@ public sealed class AppController : IDisposable
 
         menu.Items.Add(new Separator());
 
+        var uninstallItem = new MenuItem { Header = UiText.TrayUninstall };
+        uninstallItem.Click += (_, _) => Uninstall();
+        menu.Items.Add(uninstallItem);
+
         var exitItem = new MenuItem { Header = UiText.TrayExit };
         exitItem.Click += (_, _) => Application.Current.Shutdown();
         menu.Items.Add(exitItem);
 
         return menu;
+    }
+
+    /// <summary>
+    /// Removes settings, logs and the autostart entry, then exits. There is no installer, so
+    /// without this the user would have to know about two hidden folders and a registry value.
+    /// </summary>
+    private void Uninstall()
+    {
+        var confirmed = MessageBox.Show(
+            UiText.UninstallConfirm,
+            UiText.AppName,
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+
+        if (confirmed != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        var result = Uninstaller.RemoveUserData();
+
+        MessageBox.Show(
+            result.Failed.Count == 0 ? UiText.UninstallDone : UiText.UninstallPartial(result.Failed[0]),
+            UiText.AppName,
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
+
+        Uninstaller.ShowExecutableInExplorer();
+        Application.Current.Shutdown();
     }
 
     private void ToggleAutoStart(MenuItem item)

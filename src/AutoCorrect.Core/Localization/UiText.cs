@@ -65,6 +65,38 @@ public static class UiText
 
     public static string TrayExit => T("Beenden", "Exit");
 
+    public static string TrayUninstall => T("Deinstallieren …", "Uninstall …");
+
+    public static string UninstallConfirm => T(
+        "AutoCorrect entfernen?\n\n" +
+        "Entfernt werden:\n" +
+        "• Einstellungen (%APPDATA%\\AutoCorrect)\n" +
+        "• Protokolldateien (%LOCALAPPDATA%\\AutoCorrect)\n" +
+        "• der Autostart-Eintrag, falls gesetzt\n\n" +
+        "Die Programmdatei selbst müssen Sie danach löschen – AutoCorrect zeigt Ihnen, wo sie " +
+        "liegt. Windows und Ihre Texte bleiben unverändert.",
+        "Remove AutoCorrect?\n\n" +
+        "This removes:\n" +
+        "• the settings (%APPDATA%\\AutoCorrect)\n" +
+        "• the log files (%LOCALAPPDATA%\\AutoCorrect)\n" +
+        "• the autostart entry, if it was set\n\n" +
+        "You have to delete the program file yourself afterwards – AutoCorrect will show you " +
+        "where it is. Windows and your texts stay untouched.");
+
+    public static string UninstallDone => T(
+        "Fertig. AutoCorrect wird jetzt beendet und der Ordner mit der Programmdatei geöffnet – " +
+        "löschen Sie dort AutoCorrect.exe.",
+        "Done. AutoCorrect will now exit and open the folder holding the program file – delete " +
+        "AutoCorrect.exe there.");
+
+    public static string UninstallPartial(string leftover) => T(
+        $"Fast fertig. Dieser Ordner liess sich nicht entfernen, weil er noch benutzt wird:\n\n" +
+        $"{leftover}\n\n" +
+        "Löschen Sie ihn zusammen mit AutoCorrect.exe von Hand, nachdem das Programm beendet ist.",
+        $"Almost done. This folder could not be removed because it is still in use:\n\n" +
+        $"{leftover}\n\n" +
+        "Delete it together with AutoCorrect.exe by hand once the program has exited.");
+
     public static string TrayStartWithWindows => T("Mit Windows starten", "Start with Windows");
 
     // ---------------------------------------------------------------- first start
