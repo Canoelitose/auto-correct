@@ -160,7 +160,7 @@ jobs:
 
             ## Optional: Sprachmodell zum Umformulieren
 
-Für *Umformulieren*, *Förmlicher* und *Kürzer* braucht es ein lokales Sprachmodell,
+            Für *Umformulieren*, *Förmlicher* und *Kürzer* braucht es ein lokales Sprachmodell,
             und auch *Korrigieren* wird damit deutlich besser. Ollama installieren, einmalig ein
             Modell holen, fertig – AutoCorrect findet es von selbst:
 

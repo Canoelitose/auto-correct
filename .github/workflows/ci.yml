@@ -22,6 +22,26 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      # A workflow file that does not parse is not reported as a broken build: GitHub shows a
+      # run that failed before any step, which is easy to mistake for an infrastructure hiccup.
+      # Checking it here makes it an ordinary, obvious test failure.
+      - name: Check the workflow files parse
+        shell: pwsh
+        run: |
+          python -c @"
+          import glob, sys, yaml
+          for path in sorted(glob.glob('.github/workflows/*.yml')):
+              try:
+                  name = yaml.safe_load(open(path, encoding='utf-8')).get('name')
+              except Exception as error:
+                  print(f'{path}: {error}')
+                  sys.exit(1)
+              if not name:
+                  print(f'{path}: no name')
+                  sys.exit(1)
+              print(f'{path} -> {name}')
+          "@
+
       - name: Restore
         run: dotnet restore AutoCorrect.sln
 
