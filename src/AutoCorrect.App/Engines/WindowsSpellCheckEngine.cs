@@ -22,11 +22,83 @@ internal sealed class WindowsSpellCheckEngine : ITextEngine
     private static readonly string[] GermanTags = ["de-CH", "de-DE", "de-AT", "de"];
     private static readonly string[] EnglishTags = ["en-US", "en-GB", "en"];
 
+    /// <summary>
+    /// COM objects are expensive to create. The factory and one checker per language are built
+    /// once and reused; creating them per call made every correction noticeably slow.
+    /// </summary>
+    private static readonly object CacheLock = new();
+    private static readonly Dictionary<string, NativeMethods.ISpellChecker?> Checkers =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    private static NativeMethods.ISpellCheckerFactory? _factory;
+    private static bool _factoryFailed;
+
     private readonly Func<AppSettings> _settings;
 
     public WindowsSpellCheckEngine(Func<AppSettings> settings)
     {
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+    }
+
+    private static NativeMethods.ISpellCheckerFactory? Factory()
+    {
+        lock (CacheLock)
+        {
+            if (_factory is not null || _factoryFailed)
+            {
+                return _factory;
+            }
+
+            try
+            {
+                _factory = (NativeMethods.ISpellCheckerFactory)Activator.CreateInstance(
+                    Type.GetTypeFromCLSID(NativeMethods.SpellCheckerFactoryClsid)!)!;
+            }
+            catch (Exception ex) when (ex is COMException or InvalidCastException or ArgumentException
+                                           or NullReferenceException or NotSupportedException)
+            {
+                Log.Warn("The Windows spell checking factory is not available.", ex);
+                _factoryFailed = true;
+            }
+
+            return _factory;
+        }
+    }
+
+    /// <summary>Returns null when Windows has no dictionary for the language.</summary>
+    private static NativeMethods.ISpellChecker? Checker(string languageTag)
+    {
+        lock (CacheLock)
+        {
+            if (Checkers.TryGetValue(languageTag, out var cached))
+            {
+                return cached;
+            }
+
+            NativeMethods.ISpellChecker? checker = null;
+
+            try
+            {
+                var factory = Factory();
+                if (factory is not null)
+                {
+                    factory.IsSupported(languageTag, out var supported);
+                    if (supported)
+                    {
+                        factory.CreateSpellChecker(languageTag, out checker);
+                    }
+                }
+            }
+            catch (Exception ex) when (ex is COMException or InvalidCastException or ArgumentException
+                                           or NullReferenceException or NotSupportedException)
+            {
+                Log.Warn($"Windows spell check is not usable for {languageTag}.", ex);
+                checker = null;
+            }
+
+            Checkers[languageTag] = checker;
+            return checker;
+        }
     }
 
     public string Name => "Windows";
@@ -102,39 +174,20 @@ internal sealed class WindowsSpellCheckEngine : ITextEngine
     /// <summary>Returns null when the language is not usable at all.</summary>
     private static List<TextCorrection>? CollectCorrections(string languageTag, string input)
     {
+        var checker = Checker(languageTag);
+        if (checker is null)
+        {
+            return null;
+        }
+
         try
         {
-            var factory = (NativeMethods.ISpellCheckerFactory)Activator.CreateInstance(
-                Type.GetTypeFromCLSID(NativeMethods.SpellCheckerFactoryClsid)!)!;
-
-            try
-            {
-                factory.IsSupported(languageTag, out var supported);
-                if (!supported)
-                {
-                    return null;
-                }
-
-                factory.CreateSpellChecker(languageTag, out var checker);
-
-                try
-                {
-                    return ReadErrors(checker, input);
-                }
-                finally
-                {
-                    Marshal.ReleaseComObject(checker);
-                }
-            }
-            finally
-            {
-                Marshal.ReleaseComObject(factory);
-            }
+            return ReadErrors(checker, input);
         }
         catch (Exception ex) when (ex is COMException or InvalidCastException or NotSupportedException
                                        or ArgumentException or NullReferenceException)
         {
-            Log.Warn($"Windows spell check is not usable for {languageTag}.", ex);
+            Log.Warn($"Windows spell check failed for {languageTag}.", ex);
             return null;
         }
     }
@@ -219,52 +272,40 @@ internal sealed class WindowsSpellCheckEngine : ITextEngine
         return null;
     }
 
-    /// <summary>Language tags to try, derived from the configured correction language.</summary>
+    /// <summary>
+    /// Language tags to try. Automatic detection uses at most two: the best available German and
+    /// English variant. Checking every variant of both meant up to seven full passes over the
+    /// text for a single correction.
+    /// </summary>
     private List<string> ResolveTags()
     {
         var configured = _settings().Language;
-        var candidates = new List<string>();
 
-        if (LanguageOptions.IsAutomatic(configured))
+        if (!LanguageOptions.IsAutomatic(configured))
         {
-            candidates.AddRange(GermanTags);
-            candidates.AddRange(EnglishTags);
-        }
-        else if (configured.StartsWith("de", StringComparison.OrdinalIgnoreCase))
-        {
-            candidates.Add(configured);
-            candidates.AddRange(GermanTags);
-        }
-        else
-        {
-            candidates.Add(configured);
-            candidates.AddRange(EnglishTags);
+            var preferred = configured.StartsWith("de", StringComparison.OrdinalIgnoreCase)
+                ? GermanTags
+                : EnglishTags;
+
+            var explicitTag = FirstSupported([configured, .. preferred]);
+            return explicitTag is null ? [] : [explicitTag];
         }
 
-        return candidates.Where(IsSupported).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var tags = new List<string>(2);
+
+        if (FirstSupported(GermanTags) is { } german)
+        {
+            tags.Add(german);
+        }
+
+        if (FirstSupported(EnglishTags) is { } english)
+        {
+            tags.Add(english);
+        }
+
+        return tags;
     }
 
-    private static bool IsSupported(string languageTag)
-    {
-        try
-        {
-            var factory = (NativeMethods.ISpellCheckerFactory)Activator.CreateInstance(
-                Type.GetTypeFromCLSID(NativeMethods.SpellCheckerFactoryClsid)!)!;
-
-            try
-            {
-                factory.IsSupported(languageTag, out var supported);
-                return supported;
-            }
-            finally
-            {
-                Marshal.ReleaseComObject(factory);
-            }
-        }
-        catch (Exception ex) when (ex is COMException or InvalidCastException or ArgumentException
-                                       or NullReferenceException or NotSupportedException)
-        {
-            return false;
-        }
-    }
+    private static string? FirstSupported(IEnumerable<string> candidates) =>
+        candidates.FirstOrDefault(tag => Checker(tag) is not null);
 }

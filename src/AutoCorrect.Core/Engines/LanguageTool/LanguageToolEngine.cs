@@ -22,8 +22,18 @@ public sealed class LanguageToolEngine : ITextEngine
     /// </summary>
     public const int ProbeTimeoutSeconds = 8;
 
+    /// <summary>
+    /// How long a failed connection is remembered. Without this every single correction pays
+    /// another doomed connection attempt while no server is running, which the user feels as
+    /// a delay before the built-in spell checker takes over.
+    /// </summary>
+    private static readonly TimeSpan UnavailableFor = TimeSpan.FromSeconds(30);
+
     private readonly HttpClient _http;
     private readonly Func<AppSettings> _settingsProvider;
+
+    private DateTimeOffset _unavailableUntil = DateTimeOffset.MinValue;
+    private string _unavailableEndpoint = string.Empty;
 
     /// <param name="http">Shared singleton. Creating one client per request exhausts sockets.</param>
     /// <param name="settingsProvider">Read late so endpoint changes take effect without a restart.</param>
@@ -48,7 +58,13 @@ public sealed class LanguageToolEngine : ITextEngine
                 .GetAsync(BuildLanguagesUrl(_settingsProvider().LanguageToolEndpoint), timeout.Token)
                 .ConfigureAwait(false);
 
-            return response.IsSuccessStatusCode;
+            if (response.IsSuccessStatusCode)
+            {
+                ResetAvailability();
+                return true;
+            }
+
+            return false;
         }
         catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or UriFormatException)
         {
@@ -83,6 +99,14 @@ public sealed class LanguageToolEngine : ITextEngine
     private async Task<string> CheckAsync(string input, CancellationToken ct)
     {
         var settings = _settingsProvider();
+
+        // A server that just refused the connection is not going to answer a moment later.
+        // Changing the address in the settings clears the memory immediately.
+        if (DateTimeOffset.UtcNow < _unavailableUntil &&
+            string.Equals(_unavailableEndpoint, settings.LanguageToolEndpoint, StringComparison.Ordinal))
+        {
+            throw new EngineUnavailableException(UiText.LanguageToolUnavailable);
+        }
 
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
         timeout.CancelAfter(TimeSpan.FromSeconds(settings.RequestTimeoutSeconds));
@@ -135,6 +159,7 @@ public sealed class LanguageToolEngine : ITextEngine
         catch (Exception ex) when (ex is HttpRequestException or UriFormatException or InvalidOperationException)
         {
             Log.Warn("LanguageTool is not reachable.", ex);
+            RememberUnavailable(settings.LanguageToolEndpoint);
             throw new EngineUnavailableException(UiText.LanguageToolUnavailable, ex);
         }
 
@@ -153,6 +178,19 @@ public sealed class LanguageToolEngine : ITextEngine
         Log.Debug($"LanguageTool returned {corrections.Count} usable matches for {Log.Describe(input)}.");
 
         return CorrectionApplier.Apply(input, corrections);
+    }
+
+    private void RememberUnavailable(string endpoint)
+    {
+        _unavailableEndpoint = endpoint;
+        _unavailableUntil = DateTimeOffset.UtcNow.Add(UnavailableFor);
+    }
+
+    /// <summary>Forgets a remembered failure, for example after a successful probe.</summary>
+    public void ResetAvailability()
+    {
+        _unavailableUntil = DateTimeOffset.MinValue;
+        _unavailableEndpoint = string.Empty;
     }
 
     /// <summary>Takes the first suggestion of every match that has one.</summary>

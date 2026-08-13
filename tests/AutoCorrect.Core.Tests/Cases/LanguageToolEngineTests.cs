@@ -138,6 +138,42 @@ public static class LanguageToolEngineTests
             Assert.Contains("org.languagetool.server.HTTPServer", ex.Message);
         });
 
+        runner.Add("LanguageTool: a refused connection is not retried straight away", async () =>
+        {
+            // Retrying a server that is not there on every correction is what made the fallback
+            // to the built-in spell checker feel slow.
+            var settings = new AppSettings
+            {
+                LanguageToolEndpoint = "http://127.0.0.1:1/v2/check",
+                RequestTimeoutSeconds = 5,
+            };
+
+            using var http = new HttpClient();
+            var engine = new LanguageToolEngine(http, () => settings);
+
+            var first = System.Diagnostics.Stopwatch.StartNew();
+            await Assert.ThrowsAsync<EngineUnavailableException>(async () =>
+            {
+                await foreach (var _ in engine.ProcessAsync("Test", ProcessingMode.Correct, CancellationToken.None))
+                {
+                }
+            });
+            first.Stop();
+
+            var second = System.Diagnostics.Stopwatch.StartNew();
+            await Assert.ThrowsAsync<EngineUnavailableException>(async () =>
+            {
+                await foreach (var _ in engine.ProcessAsync("Test", ProcessingMode.Correct, CancellationToken.None))
+                {
+                }
+            });
+            second.Stop();
+
+            Assert.True(
+                second.ElapsedMilliseconds <= 5,
+                $"the second attempt still went to the network ({second.ElapsedMilliseconds} ms)");
+        });
+
         runner.Add("LanguageTool: server error is reported as unavailable", async () =>
         {
             using var server = new FakeLanguageToolServer(_ => (500, "boom"));
