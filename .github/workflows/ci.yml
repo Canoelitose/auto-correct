@@ -80,9 +80,8 @@ jobs:
       - name: Windows tests (tray, hotkeys, clipboard, popup, insertion)
         shell: pwsh
         run: |
-          # A WinExe writes to the console of its parent, so the output is captured explicitly.
           $exe = 'tests/AutoCorrect.App.Tests/bin/Release/net8.0-windows/AutoCorrect.App.Tests.exe'
-          & $exe | Tee-Object -Variable output
+          & $exe
           if ($LASTEXITCODE -ne 0) { throw "Windows tests failed with exit code $LASTEXITCODE" }
 
       - name: Publish smoke test

@@ -16,9 +16,6 @@ public static class Program
     [STAThread]
     public static int Main(string[] args)
     {
-        // Attach to the parent console when started from one, so the output is visible in CI.
-        ConsoleAttach.TryAttach();
-
         var application = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
         var exitCode = 1;
 

@@ -1,7 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>WinExe</OutputType>
+    <!-- A console application on purpose. As a WinExe the process is detached from the
+         console, so a shell neither waits for it nor sees its exit code, and a failing test
+         run would look like a pass. WPF windows work fine from a console host as long as the
+         main thread is STA. -->
+    <OutputType>Exe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
     <LangVersion>12.0</LangVersion>
@@ -9,8 +13,6 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>AutoCorrect.App.Tests</RootNamespace>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
-    <!-- WinExe so no console window flashes, but the runner still writes to stdout when
-         started from a console. -->
     <StartupObject>AutoCorrect.App.Tests.Program</StartupObject>
   </PropertyGroup>
 

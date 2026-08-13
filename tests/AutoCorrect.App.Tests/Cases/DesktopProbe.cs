@@ -61,23 +61,3 @@ internal static class DesktopProbe
         }
     }
 }
-
-internal static class ConsoleAttach
-{
-    private const int ATTACH_PARENT_PROCESS = -1;
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern bool AttachConsole(int processId);
-
-    public static void TryAttach()
-    {
-        try
-        {
-            AttachConsole(ATTACH_PARENT_PROCESS);
-        }
-        catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException)
-        {
-            // Output simply stays invisible; not worth failing the run over.
-        }
-    }
-}
