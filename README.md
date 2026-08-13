@@ -179,7 +179,7 @@ AutoCorrect.sln
 ├── tests/AutoCorrect.Core.Tests/  Logik-Tests, ohne NuGet, laufen überall
 ├── tests/AutoCorrect.App.Tests/   Windows-Tests: Tray, Hotkey, Clipboard, Popup, Einfügen
 ├── build/                         publish.ps1, make-icon.py
-└── docs/                          Build, LanguageTool-Setup, Testplan, Architektur
+└── docs/                          Build, Setup für LanguageTool und Ollama, Testpläne, Architektur
 ```
 
 ---
@@ -198,11 +198,13 @@ Drei Stufen von Tests:
 |---|---|---|
 | Logik | Korrektur-Offsets, Einstellungen, Hotkey-Parsing, Übersetzungen | überall |
 | Integration | echter LanguageTool-Server, Deutsch und Englisch | mit `AUTOCORRECT_LT_ENDPOINT` |
+| Integration | echtes Sprachmodell: Streaming, Cache, fehlendes Modell | mit `AUTOCORRECT_LLM_ENDPOINT` |
 | Windows | Tray, RegisterHotKey inkl. Konflikt, Zwischenablage, Popup, Einfügen | nur Windows |
 
 Die Windows-Stufe startet die Anwendung wirklich und läuft bei jedem Push in GitHub Actions;
 sie liest die Auswahl aus einem echten Textfeld und schreibt das Ergebnis zurück.
-Was danach noch von Hand zu prüfen ist, steht in [docs/TESTPLAN-PHASE1.md](docs/TESTPLAN-PHASE1.md).
+Was danach noch von Hand zu prüfen ist, steht in [docs/TESTPLAN-PHASE1.md](docs/TESTPLAN-PHASE1.md)
+und [docs/TESTPLAN-PHASE2.md](docs/TESTPLAN-PHASE2.md).
 
 Ausführliche Angaben inklusive der gemessenen Paketgrössen: [docs/BUILD.md](docs/BUILD.md)
 

@@ -117,5 +117,6 @@ Jeweils einen Satz mit Fehlern markieren, z. B.
 
 ## Was in Phase 1 bewusst fehlt
 
-- *Umformulieren*, *Förmlicher*, *Kürzer* brauchen die LLM-Engine aus Phase 2
-- Cache (SQLite), Fähigkeitsprüfung, Fallback-Kette und MSI/MSIX gehören zu Phase 2 und 3
+- *Umformulieren*, *Förmlicher*, *Kürzer* und der Cache kamen mit Phase 2 dazu:
+  [docs/TESTPLAN-PHASE2.md](TESTPLAN-PHASE2.md)
+- Fähigkeitsprüfung, Server-Engine im lokalen Netz und MSI/MSIX gehören zu Phase 3
