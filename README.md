@@ -4,6 +4,9 @@ Lokales Textkorrektur-Tool für Windows. Markierten Text in **jeder** Anwendung 
 abgreifen, korrigieren lassen und zurückschreiben. Die Verarbeitung läuft vollständig lokal
 bzw. im lokalen Netz – es gehen keine Daten an externe Dienste.
 
+**Deutsch und Englisch in einer Exe** – Oberfläche umschaltbar, Textsprache wird automatisch
+erkannt.
+
 **Status: Phase 1 fertig und lauffähig.** Phase 2 (lokales Sprachmodell mit Streaming) und
 Phase 3 (Fähigkeitsprüfung, Verteilung) sind vorbereitet, aber noch nicht implementiert.
 
@@ -66,6 +69,37 @@ Rechtsklick auf das Tray-Icon: *Einstellungen*, *Über*, *Mit Windows starten*, 
 
 ---
 
+## Sprachen
+
+Beides steckt in derselben Exe, es gibt keine getrennten Sprachversionen.
+
+**Oberfläche** – Tray-Icon → *Einstellungen* → *Sprache der Oberfläche*:
+
+| Einstellung | Wirkung |
+|---|---|
+| Automatisch | folgt der Windows-Anzeigesprache (Standard) |
+| Deutsch | deutsche Oberfläche, Schweizer Rechtschreibung (`ss`, kein `ß`) |
+| English | englische Oberfläche |
+
+Die Umschaltung wirkt sofort, ohne Neustart.
+
+**Sprache des korrigierten Textes** – *Einstellungen* → *Sprache des Textes*:
+
+| Einstellung | Wirkung |
+|---|---|
+| Automatisch | erkennt Deutsch und Englisch pro Textstück selbst (Standard) |
+| Deutsch (Schweiz/Deutschland/Österreich) | feste Sprache |
+| Englisch (USA/UK) | feste Sprache |
+
+Bei *Automatisch* kannst du im selben Arbeitsablauf zwischen deutschen und englischen Texten
+wechseln, ohne etwas umzustellen. Die Variantenvorgabe `de-CH,en-US` sorgt dafür, dass
+Schweizer Texte nicht plötzlich ein `ß` bekommen.
+
+Gegen LanguageTool 6.6 verifiziert: `Ich habe ein Buch gelest.` → erkannt als `de-CH`,
+`I has went to the shop.` → erkannt als `en-US`.
+
+---
+
 ## Projektstruktur
 
 ```
@@ -90,7 +124,8 @@ AutoCorrect.sln
 │   ├── Ui/                        PopupWindow, SettingsWindow, AboutWindow, ScreenPlacement
 │   └── Startup/AutoStartManager   Registry-Eintrag HKCU\...\Run
 │
-├── tests/AutoCorrect.Core.Tests/  62 Tests offline, 69 mit LanguageTool-Server, ohne NuGet
+├── tests/AutoCorrect.Core.Tests/  Logik-Tests, ohne NuGet, laufen überall
+├── tests/AutoCorrect.App.Tests/   Windows-Tests: Tray, Hotkey, Clipboard, Popup, Einfügen
 ├── build/                         publish.ps1, make-icon.py
 └── docs/                          Build, LanguageTool-Setup, Testplan, Architektur
 ```
@@ -100,14 +135,22 @@ AutoCorrect.sln
 ## Bauen und Testen
 
 ```powershell
-dotnet build AutoCorrect.sln          # Core, App und Tests
-dotnet run --project tests/AutoCorrect.Core.Tests   # 62 Tests, Exit-Code 0 = grün
+dotnet build AutoCorrect.sln                        # Core, App und Tests
+dotnet run --project tests/AutoCorrect.Core.Tests   # Logik-Tests, Exit-Code 0 = grün
 pwsh build/publish.ps1 -Target Both -Test           # beide Verteilpakete
 ```
 
-Mit gesetzter Umgebungsvariable `AUTOCORRECT_LT_ENDPOINT` kommen sieben Integrationstests
-gegen einen echten LanguageTool-Server dazu (gegen LanguageTool 6.6 verifiziert).
-Was nur von Hand prüfbar ist, steht in [docs/TESTPLAN-PHASE1.md](docs/TESTPLAN-PHASE1.md).
+Drei Stufen von Tests:
+
+| Stufe | Was | Wo |
+|---|---|---|
+| Logik | Korrektur-Offsets, Einstellungen, Hotkey-Parsing, Übersetzungen | überall |
+| Integration | echter LanguageTool-Server, Deutsch und Englisch | mit `AUTOCORRECT_LT_ENDPOINT` |
+| Windows | Tray, RegisterHotKey inkl. Konflikt, Zwischenablage, Popup, Einfügen | nur Windows |
+
+Die Windows-Stufe startet die Anwendung wirklich und läuft bei jedem Push in GitHub Actions;
+sie liest die Auswahl aus einem echten Textfeld und schreibt das Ergebnis zurück.
+Was danach noch von Hand zu prüfen ist, steht in [docs/TESTPLAN-PHASE1.md](docs/TESTPLAN-PHASE1.md).
 
 Ausführliche Angaben inklusive der gemessenen Paketgrössen: [docs/BUILD.md](docs/BUILD.md)
 
@@ -156,8 +199,7 @@ Weitere bewusste Entscheidungen sind in [docs/BUILD.md](docs/BUILD.md#entscheidu
 - **Popup-Zeit:** über UI Automation ist das Popup nach ca. 20–40 ms sichtbar. Wenn die
   Anwendung kein `TextPattern` unterstützt, greift der Clipboard-Fallback, dessen Wartezeit
   von 80–120 ms technisch notwendig ist; dann sind es ca. 120–170 ms.
-- **Kein `ß`:** Sprache steht fest auf `de-CH`, LanguageTool liefert damit Schweizer
-  Rechtschreibung.
+- **Kein `ß`:** für deutsche Texte gilt `de-CH`, damit bleibt es bei Schweizer Rechtschreibung.
 - Der verarbeitete Text wird **nie** ins Protokoll geschrieben, nur seine Länge.
 
 ---
@@ -172,7 +214,9 @@ Weitere bewusste Entscheidungen sind in [docs/BUILD.md](docs/BUILD.md#entscheidu
   "rephraseHotkey": "Ctrl+Alt+R",
   "startWithWindows": false,
   "languageToolEndpoint": "http://localhost:8081/v2/check",
-  "language": "de-CH",
+  "language": "auto",
+  "preferredVariants": "de-CH,en-US",
+  "interfaceLanguage": "auto",
   "llmEndpoint": "http://localhost:11434/v1",
   "llmModel": "qwen2.5:3b-instruct-q4_K_M",
   "logLevel": "Warning",

@@ -23,8 +23,21 @@ public static class LanguageToolIntegrationTests
 
         runner.Add("Integration: server is reachable", async () =>
         {
-            Assert.True(await CreateEngine(endpoint).IsAvailableAsync(CancellationToken.None),
-                $"no LanguageTool server at {endpoint}");
+            // A cold LanguageTool loads its models on the first request, so a single probe can
+            // legitimately time out. This is exactly why the application retries as well.
+            var engine = CreateEngine(endpoint);
+
+            for (var attempt = 1; attempt <= 5; attempt++)
+            {
+                if (await engine.IsAvailableAsync(CancellationToken.None))
+                {
+                    return;
+                }
+
+                await Task.Delay(3000);
+            }
+
+            throw new AssertionException($"no LanguageTool server at {endpoint} after 5 attempts");
         });
 
         runner.Add("Integration: corrects a German sentence with several errors", async () =>

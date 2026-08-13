@@ -15,6 +15,13 @@ public sealed class LanguageToolEngine : ITextEngine
     public const string DefaultEndpoint = "http://localhost:8081/v2/check";
     public const string DefaultLanguage = "de-CH";
 
+    /// <summary>
+    /// Timeout of the availability probe. A freshly started LanguageTool loads its language
+    /// models on the first request and needs clearly more than a second to answer, so a short
+    /// timeout would report a healthy server as offline.
+    /// </summary>
+    public const int ProbeTimeoutSeconds = 8;
+
     private readonly HttpClient _http;
     private readonly Func<AppSettings> _settingsProvider;
 
@@ -35,7 +42,7 @@ public sealed class LanguageToolEngine : ITextEngine
         try
         {
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            timeout.CancelAfter(TimeSpan.FromSeconds(2));
+            timeout.CancelAfter(TimeSpan.FromSeconds(ProbeTimeoutSeconds));
 
             using var response = await _http
                 .GetAsync(BuildLanguagesUrl(_settingsProvider().LanguageToolEndpoint), timeout.Token)

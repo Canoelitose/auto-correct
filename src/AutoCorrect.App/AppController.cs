@@ -66,10 +66,67 @@ public sealed class AppController : IDisposable
 
         RegisterHotkeys(reportConflicts: true);
 
+        // A first-run check: without a LanguageTool server nothing works, and finding that out
+        // only after the first hotkey press is a poor first impression.
+        _ = CheckEngineOnStartupAsync();
+
         // Keep the registry in sync with the setting, for example after the executable moved.
         if (_settings.StartWithWindows != AutoStartManager.IsEnabled())
         {
             AutoStartManager.SetEnabled(_settings.StartWithWindows);
+        }
+    }
+
+    /// <summary>
+    /// Checks once after start-up whether an engine answers, and warns if not.
+    ///
+    /// LanguageTool is usually started together with Windows and needs a good half minute to
+    /// load its models. The check is therefore repeated a few times; a warning on a server that
+    /// is merely still starting would be a false alarm.
+    /// </summary>
+    private async Task CheckEngineOnStartupAsync()
+    {
+        const int attempts = 4;
+        const int pauseSeconds = 12;
+
+        try
+        {
+            for (var attempt = 1; attempt <= attempts; attempt++)
+            {
+                if (_disposed)
+                {
+                    return;
+                }
+
+                using var cts = new CancellationTokenSource(
+                    TimeSpan.FromSeconds(Core.Engines.LanguageTool.LanguageToolEngine.ProbeTimeoutSeconds + 2));
+
+                if (await _engine.IsAvailableAsync(cts.Token).ConfigureAwait(true))
+                {
+                    Log.Info($"Engine reachable after {attempt} attempt(s).");
+                    return;
+                }
+
+                if (attempt < attempts)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(pauseSeconds)).ConfigureAwait(true);
+                }
+            }
+
+            if (_disposed)
+            {
+                return;
+            }
+
+            Log.Info("No engine reachable at start-up.");
+            _tray.ShowNotification(
+                UiText.AppName,
+                UiText.LanguageToolMissingAtStartup,
+                TrayNotificationLevel.Warning);
+        }
+        catch (Exception ex)
+        {
+            Log.Warn("The start-up check failed.", ex);
         }
     }
 

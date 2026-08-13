@@ -15,8 +15,15 @@
     <RootNamespace>AutoCorrect.App</RootNamespace>
     <AssemblyName>AutoCorrect</AssemblyName>
     <Version>1.0.0</Version>
+    <FileVersion>1.0.0.0</FileVersion>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <InformationalVersion>1.0.0</InformationalVersion>
     <Product>AutoCorrect</Product>
     <Company>AutoCorrect</Company>
+    <Authors>AutoCorrect</Authors>
+    <Description>Lokale Textkorrektur per Hotkey / Local text correction via hotkey</Description>
+    <Copyright>MIT-Lizenz</Copyright>
+    <NeutralLanguage>de-CH</NeutralLanguage>
     <ApplicationIcon>Assets\tray.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>

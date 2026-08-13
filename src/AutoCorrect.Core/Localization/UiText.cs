@@ -119,6 +119,12 @@ public static class UiText
         "java -cp \"languagetool-server.jar;libs/*\" org.languagetool.server.HTTPServer --port 8081\n\n" +
         "Check the address in the settings.");
 
+    public static string LanguageToolMissingAtStartup => T(
+        "LanguageTool läuft nicht. Ohne den lokalen Server kann kein Text korrigiert werden – " +
+        "siehe docs/SETUP-LANGUAGETOOL.md.",
+        "LanguageTool is not running. Without the local server no text can be corrected – " +
+        "see docs/SETUP-LANGUAGETOOL.md.");
+
     public static string ModeNotSupported => T(
         "Für diesen Modus ist keine Engine verfügbar.",
         "No engine is available for this mode.");
