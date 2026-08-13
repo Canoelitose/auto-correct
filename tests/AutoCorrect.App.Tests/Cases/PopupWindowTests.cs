@@ -133,6 +133,16 @@ public static class PopupWindowTests
                 "the engine kept running after cancellation");
         });
 
+        runner.Add("Welcome: the first start window shows the hotkey", () =>
+        {
+            var settings = new AutoCorrect.Core.Configuration.AppSettings();
+            using var window = new WelcomeWindow(settings, engineAvailable: false);
+
+            window.Show();
+            Assert.True(window.IsVisible, "the welcome window did not appear");
+            window.Close();
+        });
+
         runner.Add("Popup: the interface language reaches the window", () =>
         {
             using var language = new LanguageScope(UiLanguage.English);

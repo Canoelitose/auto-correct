@@ -67,6 +67,45 @@ public static class UiText
 
     public static string TrayStartWithWindows => T("Mit Windows starten", "Start with Windows");
 
+    // ---------------------------------------------------------------- first start
+
+    public static string WelcomeTitle => T(
+        "AutoCorrect läuft jetzt",
+        "AutoCorrect is running");
+
+    public static string WelcomeIntro => T(
+        "AutoCorrect hat absichtlich kein eigenes Fenster. Es wartet im Hintergrund, bis Sie " +
+        "irgendwo Text markieren und den Hotkey drücken.",
+        "AutoCorrect deliberately has no window of its own. It waits in the background until " +
+        "you select text somewhere and press the hotkey.");
+
+    public static string WelcomeHotkeyCaption => T(
+        "Text markieren, dann drücken:",
+        "Select text, then press:");
+
+    public static string WelcomeTrayHint => T(
+        "Das Symbol liegt im Infobereich der Taskleiste, rechts unten neben der Uhr. " +
+        "Windows 11 versteckt neue Symbole hinter dem Pfeil ^ – klicken Sie darauf und ziehen " +
+        "Sie das Symbol nach unten auf die Taskleiste, damit es dauerhaft sichtbar bleibt. " +
+        "Rechtsklick auf das Symbol öffnet Einstellungen, Über und Beenden.",
+        "The icon sits in the notification area next to the clock. Windows 11 hides new icons " +
+        "behind the ^ arrow – click it and drag the icon down onto the taskbar to keep it " +
+        "visible. Right-click the icon for settings, about and exit.");
+
+    public static string WelcomeClose => T("Alles klar", "Got it");
+
+    public static string AlreadyRunning => T(
+        "AutoCorrect läuft bereits.\n\n" +
+        "Das Symbol liegt im Infobereich der Taskleiste. Unter Windows 11 steckt es " +
+        "möglicherweise hinter dem Pfeil ^ links neben der Uhr.",
+        "AutoCorrect is already running.\n\n" +
+        "The icon sits in the notification area. On Windows 11 it may be hidden behind the " +
+        "^ arrow next to the clock.");
+
+    public static string TrayStarted(string hotkey) => T(
+        $"Läuft. Text markieren und {hotkey} drücken.",
+        $"Running. Select text and press {hotkey}.");
+
     // ---------------------------------------------------------------- capture
 
     public static string NoSelection => T(

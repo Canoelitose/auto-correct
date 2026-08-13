@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows;
 using System.Windows.Threading;
 using AutoCorrect.Core.Configuration;
@@ -21,13 +22,40 @@ public partial class App : Application
         _singleInstanceMutex = new Mutex(initiallyOwned: true, SingleInstanceMutexName, out var isFirstInstance);
         if (!isFirstInstance)
         {
-            // A second instance would fight over the same hotkeys, so it exits silently.
+            // A second instance would fight over the same hotkeys. Exiting silently made the
+            // application look broken: a second double click simply did nothing.
+            var store2 = new SettingsStore();
+            UiText.Language = UiText.Resolve(store2.Load().InterfaceLanguage);
+
+            MessageBox.Show(
+                UiText.AlreadyRunning,
+                UiText.AppName,
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+
             Shutdown();
             return;
         }
 
         var store = new SettingsStore();
+
+        // No settings file yet means this is the first start on this machine.
+        var isFirstStart = !File.Exists(store.FilePath);
         var settings = store.Load();
+
+        if (isFirstStart)
+        {
+            // Write the defaults straight away. Without the file the next start would look like
+            // a first start again and show the welcome window over and over.
+            try
+            {
+                store.Save(settings);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // Not fatal: the application runs on defaults, only the welcome window repeats.
+            }
+        }
 
         _logger = new FileLogger(Log.DefaultFilePath, settings.LogLevel);
         Log.Initialize(_logger);
@@ -44,7 +72,7 @@ public partial class App : Application
 
         try
         {
-            _controller = new AppController(store, settings);
+            _controller = new AppController(store, settings) { IsFirstStart = isFirstStart };
         }
         catch (Exception ex)
         {

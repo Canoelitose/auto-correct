@@ -40,6 +40,9 @@ public sealed class AppController : IDisposable
     private bool _busy;
     private bool _disposed;
 
+    /// <summary>True when no settings file existed yet, so a welcome window is shown.</summary>
+    public bool IsFirstStart { get; init; }
+
     public AppController(SettingsStore store, AppSettings settings)
     {
         _store = store ?? throw new ArgumentNullException(nameof(store));
@@ -89,6 +92,8 @@ public sealed class AppController : IDisposable
         const int attempts = 4;
         const int pauseSeconds = 12;
 
+        var available = false;
+
         try
         {
             for (var attempt = 1; attempt <= attempts; attempt++)
@@ -104,29 +109,69 @@ public sealed class AppController : IDisposable
                 if (await _engine.IsAvailableAsync(cts.Token).ConfigureAwait(true))
                 {
                     Log.Info($"Engine reachable after {attempt} attempt(s).");
-                    return;
+                    available = true;
+                    break;
                 }
 
-                if (attempt < attempts)
+                // On a first start there is no point waiting: the user is looking at the screen
+                // right now and wants to know what is going on.
+                if (IsFirstStart || attempt == attempts)
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(pauseSeconds)).ConfigureAwait(true);
+                    break;
                 }
-            }
 
-            if (_disposed)
-            {
-                return;
+                await Task.Delay(TimeSpan.FromSeconds(pauseSeconds)).ConfigureAwait(true);
             }
+        }
+        catch (Exception ex)
+        {
+            Log.Warn("The start-up check failed.", ex);
+        }
 
+        if (_disposed)
+        {
+            return;
+        }
+
+        if (IsFirstStart)
+        {
+            ShowWelcome(available);
+            return;
+        }
+
+        if (!available)
+        {
             Log.Info("No engine reachable at start-up.");
             _tray.ShowNotification(
                 UiText.AppName,
                 UiText.LanguageToolMissingAtStartup,
                 TrayNotificationLevel.Warning);
         }
+    }
+
+    /// <summary>
+    /// The application has no main window, and Windows 11 hides new tray icons behind the
+    /// chevron, so the very first start would otherwise look like nothing happened at all.
+    /// </summary>
+    private void ShowWelcome(bool engineAvailable)
+    {
+        try
+        {
+            var window = new WelcomeWindow(_settings, engineAvailable);
+            window.ShowDialog();
+
+            _tray.ShowNotification(
+                UiText.AppName,
+                UiText.TrayStarted(_settings.PrimaryHotkey));
+
+            if (window.OpenSettingsRequested)
+            {
+                ShowSettings();
+            }
+        }
         catch (Exception ex)
         {
-            Log.Warn("The start-up check failed.", ex);
+            Log.Warn("The welcome window could not be shown.", ex);
         }
     }
 
