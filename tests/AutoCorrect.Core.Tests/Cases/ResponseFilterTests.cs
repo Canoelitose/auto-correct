@@ -54,6 +54,13 @@ public static class ResponseFilterTests
             Assert.Equal("\"Ein angefangenes Zitat", Run("\"Ein angefangenes Zitat"));
         });
 
+        runner.Add("Filter: an answer that quotes something itself is left alone", () =>
+        {
+            // Stripping the outer pair here would take the wrong two marks and wreck the text.
+            const string answer = "\"Hallo\", sagte er, und sie antwortete: \"Tschuess\"";
+            Assert.Equal(answer, Run(answer));
+        });
+
         runner.Add("Filter: echoed fences are removed", () =>
         {
             Assert.Equal("Der neue Text.", Run("---\nDer neue Text.\n---"));

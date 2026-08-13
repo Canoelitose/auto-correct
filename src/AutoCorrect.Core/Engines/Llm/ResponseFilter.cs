@@ -292,12 +292,30 @@ internal sealed class ResponseFilter
         return true;
     }
 
-    /// <summary>Removes the wrapping quotation marks, but only if both of them are there.</summary>
+    /// <summary>Removes the wrapping quotation marks, but only if they really are wrapping.</summary>
     private void DropQuotePair()
     {
         if (_buffer.Length < 2 || Array.IndexOf(ClosingQuotes, _buffer[^1]) < 0)
         {
             // An opening mark without a closing one belongs to the text.
+            return;
+        }
+
+        // Exactly two marks in the whole answer, the first and the last: that is wrapping.
+        // More of them means the text quotes something itself, for example
+        // "Hallo", sagte er: "Tschuess" - stripping the outer pair would wreck that.
+        var marks = 0;
+        for (var index = 0; index < _buffer.Length; index++)
+        {
+            if (Array.IndexOf(OpeningQuotes, _buffer[index]) >= 0 ||
+                Array.IndexOf(ClosingQuotes, _buffer[index]) >= 0)
+            {
+                marks++;
+            }
+        }
+
+        if (marks != 2)
+        {
             return;
         }
 
