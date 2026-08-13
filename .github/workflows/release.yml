@@ -122,6 +122,18 @@ jobs:
 
             Windows 10 (1809+) oder Windows 11, x64.
 
+            ## Sprachen
+
+            Deutsch und Englisch stecken in derselben Exe, es gibt keine getrennten
+            Sprachversionen.
+
+            - **Oberfläche**: Tray-Icon → *Einstellungen* → *Sprache der Oberfläche*.
+              Umschaltung wirkt sofort, ohne Neustart. Voreinstellung folgt der
+              Windows-Anzeigesprache.
+            - **Sprache des Textes**: standardmässig *Automatisch* – deutsche und englische
+              Texte werden im selben Ablauf erkannt und korrigiert, ohne etwas umzustellen.
+              Schweizer Schreibung bleibt erhalten (`ss`, kein `ß`).
+
             ## Vor dem ersten Start
 
             AutoCorrect braucht einen lokal laufenden LanguageTool-Server:
