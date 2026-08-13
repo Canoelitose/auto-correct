@@ -106,17 +106,31 @@ public static class PopupWindowTests
 
         runner.Add("Popup: ending a session cancels the running request", async () =>
         {
-            var engine = new StubEngine("kommt nie an") { DelayMs = 4000 };
+            var engine = new StubEngine("darf nie erscheinen") { DelayMs = 1200 };
             using var popup = new PopupScope(engine);
             popup.Window.Warmup();
 
             popup.Window.StartSession("Eingabe", ProcessingMode.Correct, IntPtr.Zero);
+            Assert.True(popup.Window.IsSessionActive, "no session was started");
+
             popup.Window.EndSession();
 
-            await Task.Delay(300);
-
-            Assert.True(engine.WasCancelled, "the engine was not cancelled");
+            Assert.False(popup.Window.IsSessionActive, "the session is still active");
             Assert.False(popup.Window.IsVisible, "the popup is still visible");
+
+            // Wait past the engine delay. The result of a cancelled run must never appear,
+            // and the window must stay closed.
+            await Task.Delay(engine.DelayMs + 800);
+
+            Assert.Equal(string.Empty, popup.Window.ResultTextForTests);
+            Assert.False(popup.Window.IsVisible, "the popup came back after cancellation");
+
+            // Either the engine was cancelled while running, or it never started because the
+            // token was already cancelled. Both are correct; asserting only on the first one
+            // makes the test depend on scheduling luck.
+            Assert.True(
+                engine.WasCancelled || !engine.WasStarted,
+                "the engine kept running after cancellation");
         });
 
         runner.Add("Popup: the interface language reaches the window", () =>
@@ -181,6 +195,8 @@ public static class PopupWindowTests
 
         public bool WasCancelled { get; private set; }
 
+        public bool WasStarted { get; private set; }
+
         public bool SupportsMode(ProcessingMode mode) => mode == ProcessingMode.Correct;
 
         public Task<bool> IsAvailableAsync(CancellationToken ct) => Task.FromResult(true);
@@ -190,6 +206,8 @@ public static class PopupWindowTests
             ProcessingMode mode,
             [EnumeratorCancellation] CancellationToken ct)
         {
+            WasStarted = true;
+
             foreach (var chunk in _chunks)
             {
                 if (DelayMs > 0)
