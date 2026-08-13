@@ -104,6 +104,43 @@ public static class PopupWindowTests
             popup.Window.EndSession();
         });
 
+        runner.Add("Popup: a slow model is explained instead of looking hung", async () =>
+        {
+            // A model that is not in memory yet takes tens of seconds for the first token. An
+            // unchanging "Wird verarbeitet ..." looks like a hang, so the status has to say why.
+            var engine = new RewriteEngine("umformuliert") { DelayMs = 20_000 };
+            using var popup = new PopupScope(engine);
+            popup.Window.Warmup();
+
+            popup.Window.StartSession("Eingabe", ProcessingMode.Rephrase, IntPtr.Zero);
+            Assert.Contains(UiText.StatusWorking, popup.Window.StatusLineForTests);
+
+            await WaitUntil(
+                () => popup.Window.StatusLineForTests.Contains(UiText.StatusModelLoading, StringComparison.Ordinal),
+                8000);
+
+            popup.Window.EndSession();
+        });
+
+        runner.Add("Popup: correcting never claims a model is loading", async () =>
+        {
+            // Correcting does not go to a model at all; the note would simply be untrue.
+            var engine = new StubEngine("korrigiert") { DelayMs = 20_000 };
+            using var popup = new PopupScope(engine);
+            popup.Window.Warmup();
+
+            popup.Window.StartSession("Eingabe", ProcessingMode.Correct, IntPtr.Zero);
+
+            await Task.Delay(6000);
+
+            Assert.False(
+                popup.Window.StatusLineForTests.Contains(UiText.StatusModelLoading, StringComparison.Ordinal),
+                $"the status claimed a model was loading: {popup.Window.StatusLineForTests}");
+            Assert.Contains(UiText.StatusWorking, popup.Window.StatusLineForTests);
+
+            popup.Window.EndSession();
+        });
+
         runner.Add("Popup: ending a session cancels the running request", async () =>
         {
             var engine = new StubEngine("darf nie erscheinen") { DelayMs = 1200 };
@@ -239,6 +276,40 @@ public static class PopupWindowTests
                         WasCancelled = true;
                         throw;
                     }
+                }
+
+                ct.ThrowIfCancellationRequested();
+                yield return chunk;
+            }
+        }
+    }
+
+    /// <summary>Like <see cref="StubEngine"/>, but for the modes a language model handles.</summary>
+    private sealed class RewriteEngine : ITextEngine
+    {
+        private readonly string[] _chunks;
+
+        public RewriteEngine(params string[] chunks) => _chunks = chunks;
+
+        public string Name => "Stub-Modell";
+
+        public int DelayMs { get; init; }
+
+        public bool SupportsMode(ProcessingMode mode) =>
+            mode is ProcessingMode.Rephrase or ProcessingMode.Formal or ProcessingMode.Shorten;
+
+        public Task<bool> IsAvailableAsync(CancellationToken ct) => Task.FromResult(true);
+
+        public async IAsyncEnumerable<string> ProcessAsync(
+            string input,
+            ProcessingMode mode,
+            [EnumeratorCancellation] CancellationToken ct)
+        {
+            foreach (var chunk in _chunks)
+            {
+                if (DelayMs > 0)
+                {
+                    await Task.Delay(DelayMs, ct).ConfigureAwait(false);
                 }
 
                 ct.ThrowIfCancellationRequested();

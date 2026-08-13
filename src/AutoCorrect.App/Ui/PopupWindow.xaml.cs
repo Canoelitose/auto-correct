@@ -25,6 +25,9 @@ public partial class PopupWindow : Window
     /// </summary>
     private const int FlushIntervalMs = 30;
 
+    /// <summary>How long to wait before explaining that the model still has to load.</summary>
+    private const int LoadingNoteAfterSeconds = 4;
+
     private const int OriginalPreviewLength = 400;
 
     private readonly ITextEngine _engine;
@@ -44,6 +47,15 @@ public partial class PopupWindow : Window
     private int _runId;
 
     private string? _fallbackNote;
+
+    /// <summary>
+    /// Set from the enumeration thread as soon as the first token arrives, read on the UI
+    /// thread by the flush timer. Only ever written true, so a plain volatile read is enough.
+    /// </summary>
+    private volatile bool _produced;
+
+    private DateTime _runStartedAt;
+    private bool _loadingNoteShown;
     private string _original = string.Empty;
     private IntPtr _targetWindow;
     private ProcessingMode _mode = ProcessingMode.Correct;
@@ -66,7 +78,11 @@ public partial class PopupWindow : Window
         {
             Interval = TimeSpan.FromMilliseconds(FlushIntervalMs),
         };
-        _flushTimer.Tick += (_, _) => FlushPending();
+        _flushTimer.Tick += (_, _) =>
+        {
+            ShowLoadingNoteIfOverdue();
+            FlushPending();
+        };
 
         _modeButtons[ProcessingMode.Correct] = ModeCorrectButton;
         _modeButtons[ProcessingMode.Rephrase] = ModeRephraseButton;
@@ -213,6 +229,11 @@ public partial class PopupWindow : Window
         ResultBox.Clear();
         ResultBox.IsReadOnly = true;
         HideError();
+
+        _produced = false;
+        _loadingNoteShown = false;
+        _runStartedAt = DateTime.UtcNow;
+
         SetBusy(true);
         SetStatus($"{_engine.Name} · {UiText.ModeLabel(mode)} · {UiText.StatusWorking}");
 
@@ -235,6 +256,8 @@ public partial class PopupWindow : Window
                         {
                             _pending.Append(chunk);
                         }
+
+                        _produced = true;
                     }
                 },
                 ct).ConfigureAwait(true);
@@ -297,6 +320,30 @@ public partial class PopupWindow : Window
             cts.Dispose();
         }
     }
+
+    /// <summary>
+    /// Explains the wait before the first token. A model that is not in memory yet takes tens
+    /// of seconds to load, and an unchanging "Wird verarbeitet …" looks like a hang.
+    /// </summary>
+    private void ShowLoadingNoteIfOverdue()
+    {
+        if (_produced || _loadingNoteShown || !IsModelMode(_mode))
+        {
+            return;
+        }
+
+        if (DateTime.UtcNow - _runStartedAt < TimeSpan.FromSeconds(LoadingNoteAfterSeconds))
+        {
+            return;
+        }
+
+        _loadingNoteShown = true;
+        SetStatus($"{_engine.Name} · {UiText.ModeLabel(_mode)} · {UiText.StatusModelLoading}");
+    }
+
+    /// <summary>The modes a language model handles; only those have a loading wait.</summary>
+    private static bool IsModelMode(ProcessingMode mode) =>
+        mode is ProcessingMode.Rephrase or ProcessingMode.Formal or ProcessingMode.Shorten;
 
     private void FlushPending()
     {

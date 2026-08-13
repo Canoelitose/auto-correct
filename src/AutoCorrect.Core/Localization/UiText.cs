@@ -166,6 +166,11 @@ public static class UiText
 
     public static string StatusWorking => T("Wird verarbeitet …", "Processing …");
 
+    /// <summary>Shown while a cold model is still loading, so the wait is explained.</summary>
+    public static string StatusModelLoading => T(
+        "Modell wird geladen, beim ersten Mal dauert das …",
+        "Loading the model, the first time takes a while …");
+
     public static string StatusDone => T("Fertig", "Done");
 
     public static string StatusCancelled => T("Abgebrochen", "Cancelled");
