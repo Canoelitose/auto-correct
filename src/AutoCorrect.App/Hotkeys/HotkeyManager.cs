@@ -72,8 +72,8 @@ public sealed class HotkeyManager : IDisposable
             return new HotkeyRegistrationResult(hotkey, false, validationError);
         }
 
-        // Combinations Windows owns itself cannot be claimed through RegisterHotKey, so they go
-        // straight to the keyboard hook instead of failing first.
+        // Combinations Windows owns itself cannot be claimed through RegisterHotKey. Only these
+        // go through the keyboard hook; conflicts with other applications must stay visible.
         if (hotkey.IsReservedByWindows)
         {
             return RegisterThroughHook(hotkey, callback);
@@ -89,13 +89,9 @@ public sealed class HotkeyManager : IDisposable
             var error = Marshal.GetLastWin32Error();
             Log.Warn($"RegisterHotKey failed for id {id} with Win32 error {error}.");
 
-            // Another application may simply hold the combination; the hook can still deliver it.
-            var viaHook = RegisterThroughHook(hotkey, callback);
-            if (viaHook.Success)
-            {
-                return viaHook;
-            }
-
+            // No fallback to the keyboard hook here on purpose. A failure means another
+            // application already holds the combination, and the hook would sit in front of it
+            // and steal the hotkey. The conflict is reported so the user can pick something else.
             return new HotkeyRegistrationResult(
                 hotkey,
                 false,

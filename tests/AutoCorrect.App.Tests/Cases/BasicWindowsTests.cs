@@ -120,10 +120,13 @@ public static class HotkeyTests
             var first = managerA.Register(hotkey, () => { });
             Assert.True(first.Success, $"the first registration should succeed: {first.Error}");
 
+            // The keyboard hook must not be used to take a combination away from whoever holds
+            // it; a conflict stays a conflict and is reported.
             var second = managerB.Register(hotkey, () => { });
             Assert.False(second.Success, "the second registration must fail");
             Assert.NotNull(second.Error);
             Assert.Contains(hotkey.ToString(), second.Error!);
+            Assert.Equal(HotkeyMethod.None, second.Method);
         });
 
         runner.Add("Hotkey: unregistering frees the combination again", () =>
