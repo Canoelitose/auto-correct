@@ -136,11 +136,17 @@ public static class PopupWindowTests
         runner.Add("Welcome: the first start window shows the hotkey", () =>
         {
             var settings = new AutoCorrect.Core.Configuration.AppSettings();
-            using var window = new WelcomeWindow(settings, engineAvailable: false);
+            var window = new WelcomeWindow(settings, engineAvailable: false);
 
-            window.Show();
-            Assert.True(window.IsVisible, "the welcome window did not appear");
-            window.Close();
+            try
+            {
+                window.Show();
+                Assert.True(window.IsVisible, "the welcome window did not appear");
+            }
+            finally
+            {
+                window.Close();
+            }
         });
 
         runner.Add("Popup: the interface language reaches the window", () =>
