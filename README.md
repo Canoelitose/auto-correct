@@ -212,7 +212,7 @@ Ausführliche Angaben inklusive der gemessenen Paketgrössen: [docs/BUILD.md](do
 
 ## Beispiele aus einem echten Durchlauf
 
-Gegen LanguageTool 6.6 mit `de-CH`:
+Korrigieren, gegen LanguageTool 6.6 mit `de-CH`:
 
 ```
 vorher : Ich habe gestern ein Buch gelest und dan geschlafen.
@@ -225,6 +225,11 @@ vorher : Die Strasse ist gross und weiss gestrichen worden.
 nachher: Die Strasse ist gross und weiss gestrichen worden.   (Schweizer Schreibung bleibt)
 ```
 
+Wie *Umformulieren*, *Förmlicher* und *Kürzer* ausfallen, hängt vom gewählten Modell ab –
+hier stehen deshalb bewusst keine erfundenen Beispiele. Was das Programm garantiert, ist
+geprüft: die Antwort kommt wachsend an, ohne Einleitung, ohne Anführungszeichen um den ganzen
+Text, und dieselbe Anfrage wird beim zweiten Mal sofort beantwortet.
+
 ---
 
 ## Abweichungen von der Vorgabe
@@ -236,9 +241,12 @@ Zwei Vorgaben sind mit WPF auf .NET 8 nicht erfüllbar. Beides ist gemessen, nic
    Trimming ist für WPF nicht unterstützt.
 
 2. **Client < 40 MB self-contained** – ohne Trimming ist ein self-contained WPF-Build
-   ca. **68 MB** (62 MB Executable plus native WPF-Bibliotheken). Unter 40 MB kommt man
-   nur framework-abhängig: dann ist die Exe **0.4 MB**, setzt aber die .NET 8 Desktop
-   Runtime auf dem Zielgerät voraus. Beide Varianten sind als Publish-Profil hinterlegt.
+   ca. **67 MB**. Unter 40 MB kommt man nur framework-abhängig: dann ist die Exe **2.4 MB**,
+   setzt aber die .NET 8 Desktop Runtime auf dem Zielgerät voraus. Beide Varianten sind als
+   Publish-Profil hinterlegt.
+
+Von den erlaubten Paketen wird eines benutzt: `Microsoft.Data.Sqlite` für den Zwischenspeicher
+aus Phase 2. `System.Text.Json` ist in .NET 8 enthalten, weitere NuGet-Pakete gibt es nicht.
 
 Weitere bewusste Entscheidungen sind in [docs/BUILD.md](docs/BUILD.md#entscheidungen) und
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) begründet.
@@ -258,7 +266,12 @@ Weitere bewusste Entscheidungen sind in [docs/BUILD.md](docs/BUILD.md#entscheidu
   Tastaturlayout-Wechsel; AutoCorrect fängt sie über einen Low-Level-Tastaturhaken ab und
   schluckt sie, der Layout-Wechsel entfällt dadurch. Wer ihn braucht, stellt in den
   Einstellungen z. B. auf `Ctrl+Alt+Leertaste` um.
-- Der verarbeitete Text wird **nie** ins Protokoll geschrieben, nur seine Länge.
+- Der verarbeitete Text wird **nie** ins Protokoll geschrieben, nur seine Länge. Der
+  Zwischenspeicher unter `%LOCALAPPDATA%\AutoCorrect\cache.db` enthält dagegen naturgemäss
+  Klartext; er lässt sich in den Einstellungen jederzeit leeren.
+- **Erste Umformulierung nach dem Start:** das Modell muss geladen werden, das dauert je nach
+  Rechner 10–60 Sekunden. Das Popup sagt das dann auch. Danach beginnt die Antwort meist in
+  unter einer Sekunde.
 
 ---
 
@@ -286,3 +299,4 @@ Weitere bewusste Entscheidungen sind in [docs/BUILD.md](docs/BUILD.md#entscheidu
 ```
 
 Protokoll: `%LOCALAPPDATA%\AutoCorrect\logs\autocorrect.log` (rotierend, 1 MB, 3 Dateien).
+Zwischenspeicher: `%LOCALAPPDATA%\AutoCorrect\cache.db` (SQLite, höchstens 5000 Einträge).
