@@ -94,13 +94,14 @@ public static class ResultCacheTests
             using var temp = new TempCacheFile();
             using var cache = new ResultCache(temp.Path);
 
-            // Eviction runs in batches, so this needs to go clearly past the limit to trigger.
-            const int total = ResultCache.MaxEntries + 200;
+            const int total = ResultCache.MaxEntries + 137;
             for (var i = 0; i < total; i++)
             {
                 cache.Set($"Satz {i}", ProcessingMode.Rephrase, "m", $"Antwort {i}");
             }
 
+            // Deliberately not a round number of writes: the limit has to hold after any write,
+            // not only after a batch happens to end.
             Assert.True(
                 cache.Count() <= ResultCache.MaxEntries,
                 $"the cache grew to {cache.Count()} entries, above the limit of {ResultCache.MaxEntries}");

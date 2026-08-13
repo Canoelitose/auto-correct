@@ -23,9 +23,6 @@ public sealed class ResultCache : IDisposable
     /// <summary>Entries kept at most; the oldest are dropped first.</summary>
     public const int MaxEntries = 5000;
 
-    /// <summary>How many entries may pile up above the limit before a cleanup runs.</summary>
-    private const int EvictionSlack = 100;
-
     /// <summary>Unit separator between the parts of a cache key; it never occurs in real text.</summary>
     private const char Separator = '\u001f';
 
@@ -35,7 +32,13 @@ public sealed class ResultCache : IDisposable
     private SqliteConnection? _connection;
     private bool _broken;
     private bool _disposed;
-    private int _writesSinceEviction;
+
+    /// <summary>
+    /// Upper bound of the stored rows, kept in memory so a write does not have to count them.
+    /// A write is counted even when it only replaced a row, so the number can be too high but
+    /// never too low - which is the safe direction for deciding when to evict.
+    /// </summary>
+    private long _approximateCount;
 
     public ResultCache(string? filePath = null)
     {
@@ -111,10 +114,8 @@ public sealed class ResultCache : IDisposable
                 command.Parameters.AddWithValue("$now", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
                 command.ExecuteNonQuery();
 
-                // Counting rows on every write would double the cost of a cheap insert.
-                if (++_writesSinceEviction >= EvictionSlack)
+                if (++_approximateCount > MaxEntries)
                 {
-                    _writesSinceEviction = 0;
                     Evict(connection);
                 }
             }
@@ -141,7 +142,7 @@ public sealed class ResultCache : IDisposable
                 using var command = connection.CreateCommand();
                 command.CommandText = "DELETE FROM entries;";
                 command.ExecuteNonQuery();
-                _writesSinceEviction = 0;
+                _approximateCount = 0;
             }
             catch (SqliteException ex)
             {
@@ -163,9 +164,7 @@ public sealed class ResultCache : IDisposable
 
             try
             {
-                using var command = connection.CreateCommand();
-                command.CommandText = "SELECT COUNT(*) FROM entries;";
-                return command.ExecuteScalar() as long? ?? 0;
+                return CountRows(connection);
             }
             catch (SqliteException ex)
             {
@@ -241,6 +240,7 @@ public sealed class ResultCache : IDisposable
             }
 
             _connection = connection;
+            _approximateCount = CountRows(connection);
             return _connection;
         }
         catch (Exception ex) when (ex is SqliteException or IOException or UnauthorizedAccessException)
@@ -252,20 +252,33 @@ public sealed class ResultCache : IDisposable
 
     private void Evict(SqliteConnection connection)
     {
-        using var command = connection.CreateCommand();
-        command.CommandText =
-            """
-            DELETE FROM entries WHERE key IN (
-                SELECT key FROM entries ORDER BY created_at DESC, key LIMIT -1 OFFSET $keep
-            );
-            """;
-        command.Parameters.AddWithValue("$keep", MaxEntries);
-
-        var removed = command.ExecuteNonQuery();
-        if (removed > 0)
+        using (var command = connection.CreateCommand())
         {
-            Log.Debug($"Cache eviction removed {removed} entries.");
+            command.CommandText =
+                """
+                DELETE FROM entries WHERE key IN (
+                    SELECT key FROM entries ORDER BY created_at DESC, key LIMIT -1 OFFSET $keep
+                );
+                """;
+            command.Parameters.AddWithValue("$keep", MaxEntries);
+
+            var removed = command.ExecuteNonQuery();
+            if (removed > 0)
+            {
+                Log.Debug($"Cache eviction removed {removed} entries.");
+            }
         }
+
+        // The estimate has served its purpose; replace it with the real number so the next
+        // eviction happens at the right moment again.
+        _approximateCount = CountRows(connection);
+    }
+
+    private static long CountRows(SqliteConnection connection)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT COUNT(*) FROM entries;";
+        return command.ExecuteScalar() as long? ?? 0;
     }
 
     /// <summary>
@@ -294,7 +307,6 @@ public sealed class ResultCache : IDisposable
         lock (_gate)
         {
             _broken = false;
-            _writesSinceEviction = 0;
         }
     }
 
