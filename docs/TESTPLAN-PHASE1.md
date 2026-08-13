@@ -1,11 +1,16 @@
 # Testplan Phase 1
 
-Die 62 automatischen Tests decken alles ab, was ohne Windows prüfbar ist: Korrektur-Logik,
-LanguageTool-Anbindung gegen einen echten HTTP-Server, Einstellungen, Hotkey-Parsing,
-Protokollierung. Sie laufen mit `dotnet run --project tests/AutoCorrect.Core.Tests`.
+Vieles ist inzwischen automatisiert und läuft bei jedem Push auf einem Windows-Runner:
 
-Alles darunter braucht eine Windows-Sitzung mit Maus, Tastatur und Bildschirm. Diese Liste
-ist zum Abhaken gedacht.
+| Stufe | Was |
+|---|---|
+| Logik | Korrektur-Offsets, Einstellungen, Hotkey-Parsing, beide Oberflächensprachen |
+| Integration | echter LanguageTool-Server, Deutsch und Englisch, automatische Erkennung |
+| Windows | Autostart, Hotkey-Registrierung inkl. Konflikt, Tray, Zwischenablage, Popup, Einfügen |
+| Smoke | die fertige Exe wird gestartet und muss als Tray-Prozess am Leben bleiben |
+
+Was hier steht, ist der Rest: alles, wofür ein Mensch mit Maus, Tastatur und Bildschirm vor
+echten Fremdanwendungen sitzen muss.
 
 ## Vorbereitung
 
@@ -86,6 +91,18 @@ Jeweils einen Satz mit Fehlern markieren, z. B.
 | 5.2 | Falsche Adresse eintragen, *Verbindung testen* | „antwortet nicht" |
 | 5.3 | `settings.json` mit Unsinn füllen, Anwendung starten | startet mit Standardwerten, `settings.json.invalid` bleibt liegen |
 | 5.4 | `settings.json` löschen, Anwendung starten | startet mit Standardwerten |
+
+## 5b Sprachen
+
+| # | Schritt | Erwartet |
+|---|---|---|
+| 5b.1 | Einstellungen → *Sprache der Oberfläche* auf *English* | Dialog wechselt sofort auf Englisch |
+| 5b.2 | Speichern, Popup öffnen | Knöpfe heissen *Correct*, *Rephrase*, Fusszeile *Enter: Apply* |
+| 5b.3 | Zurück auf *Deutsch* | alles wieder deutsch, ohne Neustart |
+| 5b.4 | *Automatisch* wählen, Windows-Anzeigesprache Deutsch | deutsche Oberfläche |
+| 5b.5 | Deutschen Satz mit Fehlern korrigieren (Sprache des Textes: *Automatisch*) | deutsche Korrektur, kein `ß` |
+| 5b.6 | Direkt danach englischen Satz korrigieren | englische Korrektur, ohne etwas umzustellen |
+| 5b.7 | *Sprache des Textes* fest auf *Englisch (USA)*, deutschen Satz korrigieren | wird als englischer Text behandelt |
 
 ## 6 Ressourcen und Datenschutz
 

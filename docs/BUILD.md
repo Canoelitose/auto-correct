@@ -13,9 +13,25 @@ für CI nützlich; getestet werden kann die Anwendung nur unter Windows.
 
 ```powershell
 dotnet build AutoCorrect.sln
-dotnet run --project tests/AutoCorrect.Core.Tests    # 62 Tests
+dotnet run --project tests/AutoCorrect.Core.Tests    # Logik- und Sprachtests
 dotnet run --project src/AutoCorrect.App             # startet die Anwendung
 ```
+
+### Windows-Tests
+
+```powershell
+dotnet build AutoCorrect.sln -c Release
+tests/AutoCorrect.App.Tests/bin/Release/net8.0-windows/AutoCorrect.App.Tests.exe
+```
+
+Diese Stufe braucht eine echte Windows-Sitzung und prüft, was sonst nur von Hand prüfbar wäre:
+Registry-Autostart, verstecktes Nachrichtenfenster, `RegisterHotKey` samt Konfliktfall,
+Tray-Icon, Zwischenablage sichern und wiederherstellen, das Popup mit geladenem XAML sowie den
+kompletten Weg Auswahl lesen → Ergebnis einfügen. Tests, die einen interaktiven Desktop
+brauchen, melden sich als übersprungen, statt aus dem falschen Grund fehlzuschlagen.
+
+Beides läuft bei jedem Push in GitHub Actions auf `windows-latest`, inklusive eines echten
+LanguageTool-Servers und eines Startversuchs der fertigen Exe.
 
 Der Testlauf hat keine NuGet-Abhängigkeit; der Runner liegt in
 `tests/AutoCorrect.Core.Tests/TestRunner.cs` und gibt bei einem Fehlschlag Exit-Code 1 zurück.
