@@ -339,4 +339,72 @@ internal static class NativeMethods
 
     public const int SM_CXSMICON = 49;
     public const int SM_CYSMICON = 50;
+
+    // ---------------------------------------------------------------- Windows spell checking
+    // The spell checker that ships with Windows (spellcheck.h). Only the first few vtable
+    // entries of each interface are declared; the layout is positional, so the order must match
+    // the header exactly and nothing beyond the declared methods may be called.
+
+    public static readonly Guid SpellCheckerFactoryClsid = new("7AB36653-1796-484B-BDFA-E74F1DB7C1DC");
+
+    public const int CORRECTIVE_ACTION_NONE = 0;
+    public const int CORRECTIVE_ACTION_GET_SUGGESTIONS = 1;
+    public const int CORRECTIVE_ACTION_REPLACE = 2;
+    public const int CORRECTIVE_ACTION_DELETE = 3;
+
+    [ComImport]
+    [Guid("8E018A9D-2415-4677-BF08-794EA61F94BB")]
+    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    public interface ISpellCheckerFactory
+    {
+        void get_SupportedLanguages([MarshalAs(UnmanagedType.Interface)] out object languages);
+
+        void IsSupported(
+            [MarshalAs(UnmanagedType.LPWStr)] string languageTag,
+            [MarshalAs(UnmanagedType.Bool)] out bool supported);
+
+        void CreateSpellChecker(
+            [MarshalAs(UnmanagedType.LPWStr)] string languageTag,
+            [MarshalAs(UnmanagedType.Interface)] out ISpellChecker value);
+    }
+
+    [ComImport]
+    [Guid("B6FD0B71-E2BC-4653-8D05-F197E412770B")]
+    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    public interface ISpellChecker
+    {
+        void get_LanguageTag([MarshalAs(UnmanagedType.LPWStr)] out string value);
+
+        void Check(
+            [MarshalAs(UnmanagedType.LPWStr)] string text,
+            [MarshalAs(UnmanagedType.Interface)] out IEnumSpellingError value);
+
+        void Suggest(
+            [MarshalAs(UnmanagedType.LPWStr)] string word,
+            [MarshalAs(UnmanagedType.Interface)] out System.Runtime.InteropServices.ComTypes.IEnumString value);
+    }
+
+    [ComImport]
+    [Guid("803E3BD4-2828-4410-8290-418D1D73C762")]
+    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    public interface IEnumSpellingError
+    {
+        /// <summary>Returns S_FALSE (1) when the enumeration is exhausted, hence PreserveSig.</summary>
+        [PreserveSig]
+        int Next([MarshalAs(UnmanagedType.Interface)] out ISpellingError? value);
+    }
+
+    [ComImport]
+    [Guid("B7C82D61-FBE8-4B47-9B27-6C0D2E0DE0A3")]
+    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    public interface ISpellingError
+    {
+        void get_StartIndex(out uint value);
+
+        void get_Length(out uint value);
+
+        void get_CorrectiveAction(out int value);
+
+        void get_Replacement([MarshalAs(UnmanagedType.LPWStr)] out string value);
+    }
 }

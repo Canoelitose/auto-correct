@@ -134,9 +134,15 @@ jobs:
               Texte werden im selben Ablauf erkannt und korrigiert, ohne etwas umzustellen.
               Schweizer Schreibung bleibt erhalten (`ss`, kein `ß`).
 
-            ## Vor dem ersten Start
+            ## Es läuft sofort
 
-            AutoCorrect braucht einen lokal laufenden LanguageTool-Server:
+            AutoCorrect nutzt die Rechtschreibprüfung, die in Windows enthalten ist – keine
+            Installation, kein Server, Deutsch und Englisch. Herunterladen und loslegen.
+
+            ## Optional: LanguageTool für Grammatik
+
+            LanguageTool findet zusätzlich Grammatik- und Zeichensetzungsfehler und wird
+            automatisch bevorzugt, sobald es läuft:
 
             ```powershell
             java -cp "languagetool-server.jar;libs/*" org.languagetool.server.HTTPServer --port 8081

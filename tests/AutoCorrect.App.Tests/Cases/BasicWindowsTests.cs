@@ -37,6 +37,81 @@ public static class EnvironmentTests
     }
 }
 
+public static class SpellCheckTests
+{
+    public static void Register(TestRunner runner)
+    {
+        runner.Add("Spell check: the Windows spell checker is available", async () =>
+        {
+            var engine = new AutoCorrect.App.Engines.WindowsSpellCheckEngine(() => new AppSettings());
+
+            // If this fails the COM interfaces are wrong, or Windows has no dictionary at all.
+            Assert.True(
+                await engine.IsAvailableAsync(CancellationToken.None),
+                "no spell checking language available on this machine");
+        });
+
+        runner.Add("Spell check: corrects an English typo without any server", async () =>
+        {
+            var settings = new AppSettings { Language = "en-US" };
+            var engine = new AutoCorrect.App.Engines.WindowsSpellCheckEngine(() => settings);
+
+            var result = await Collect(engine, "This sentense has a mistke in it.");
+
+            Assert.False(result.Contains("sentense", StringComparison.Ordinal), $"not corrected: {result}");
+            Assert.False(result.Contains("mistke", StringComparison.Ordinal), $"not corrected: {result}");
+        });
+
+        runner.Add("Spell check: correct text is returned unchanged", async () =>
+        {
+            var settings = new AppSettings { Language = "en-US" };
+            var engine = new AutoCorrect.App.Engines.WindowsSpellCheckEngine(() => settings);
+
+            const string input = "This sentence is perfectly fine.";
+            Assert.Equal(input, await Collect(engine, input));
+        });
+
+        runner.Add("Spell check: only the correction mode is supported", () =>
+        {
+            var engine = new AutoCorrect.App.Engines.WindowsSpellCheckEngine(() => new AppSettings());
+
+            Assert.True(engine.SupportsMode(AutoCorrect.Core.Engines.ProcessingMode.Correct));
+            Assert.False(engine.SupportsMode(AutoCorrect.Core.Engines.ProcessingMode.Rephrase));
+        });
+
+        runner.Add("Spell check: the fallback chain uses it when LanguageTool is missing", async () =>
+        {
+            // The situation a fresh download lands in: no server anywhere.
+            var settings = new AppSettings
+            {
+                LanguageToolEndpoint = "http://127.0.0.1:1/v2/check",
+                Language = "en-US",
+                RequestTimeoutSeconds = 3,
+            };
+
+            using var http = new System.Net.Http.HttpClient();
+            var router = AutoCorrect.App.Engines.EngineFactory.CreateRouter(http, () => settings);
+
+            var result = await Collect(router, "This sentense has a mistke.");
+
+            Assert.False(result.Contains("sentense", StringComparison.Ordinal), $"not corrected: {result}");
+            Assert.Equal("Windows", router.LastUsedName);
+        });
+    }
+
+    private static async Task<string> Collect(AutoCorrect.Core.Engines.ITextEngine engine, string input)
+    {
+        var text = new System.Text.StringBuilder();
+        await foreach (var chunk in engine.ProcessAsync(
+            input, AutoCorrect.Core.Engines.ProcessingMode.Correct, CancellationToken.None))
+        {
+            text.Append(chunk);
+        }
+
+        return text.ToString();
+    }
+}
+
 public static class AutoStartTests
 {
     public static void Register(TestRunner runner)

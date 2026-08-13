@@ -40,7 +40,20 @@ oder in GitHub unter *Actions* → *Release* → *Run workflow* die Version eint
 
 ## Schnellstart
 
-### 1. LanguageTool starten
+Herunterladen, starten, Text markieren, `Win + Leertaste` – fertig. Die Rechtschreibprüfung
+von Windows wird direkt genutzt, es ist **keine Installation nötig**.
+
+LanguageTool ist die optionale Ausbaustufe: es findet zusätzlich Grammatik- und
+Zeichensetzungsfehler. Läuft es, wird es automatisch bevorzugt.
+
+| Engine | Findet | Aufwand |
+|---|---|---|
+| Windows-Rechtschreibprüfung | Rechtschreibung, Deutsch und Englisch | keiner, ist in Windows enthalten |
+| LanguageTool | zusätzlich Grammatik und Zeichensetzung | Java + Server starten |
+
+Welche Engine geantwortet hat, steht in der Statuszeile des Popups.
+
+### 1. Optional: LanguageTool starten
 
 ```powershell
 # einmalig herunterladen und entpacken

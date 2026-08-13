@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using AutoCorrect.Core.Localization;
 
 namespace AutoCorrect.Core.Engines;
@@ -54,11 +55,59 @@ public sealed class EngineRouter : ITextEngine
         return false;
     }
 
-    public IAsyncEnumerable<string> ProcessAsync(string input, ProcessingMode mode, CancellationToken ct)
-    {
-        var engine = Resolve(mode)
-            ?? throw new EngineUnavailableException(UiText.ModeNotSupported);
+    /// <summary>Name of the engine that last produced a result, for the popup status line.</summary>
+    public string? LastUsedName { get; private set; }
 
-        return engine.ProcessAsync(input, mode, ct);
+    /// <summary>
+    /// Runs the first engine that supports the mode. If it reports that its service is not
+    /// reachable before producing anything, the next one takes over. That is the fallback chain:
+    /// LanguageTool when it runs, the built-in Windows spell checker otherwise.
+    ///
+    /// Once an engine has produced output the fallback is off - switching mid result would mix
+    /// two different answers together.
+    /// </summary>
+    public async IAsyncEnumerable<string> ProcessAsync(
+        string input,
+        ProcessingMode mode,
+        [EnumeratorCancellation] CancellationToken ct)
+    {
+        var candidates = _engines.Where(e => e.SupportsMode(mode)).ToList();
+        if (candidates.Count == 0)
+        {
+            throw new EngineUnavailableException(UiText.ModeNotSupported);
+        }
+
+        for (var index = 0; index < candidates.Count; index++)
+        {
+            var engine = candidates[index];
+            var isLast = index == candidates.Count - 1;
+            var produced = false;
+
+            await using var enumerator = engine.ProcessAsync(input, mode, ct).GetAsyncEnumerator(ct);
+
+            while (true)
+            {
+                bool moved;
+                try
+                {
+                    moved = await enumerator.MoveNextAsync().ConfigureAwait(false);
+                }
+                catch (EngineUnavailableException) when (!produced && !isLast)
+                {
+                    // Nothing was shown to the user yet, so the next engine can take over.
+                    break;
+                }
+
+                if (!moved)
+                {
+                    LastUsedName = engine.Name;
+                    yield break;
+                }
+
+                produced = true;
+                LastUsedName = engine.Name;
+                yield return enumerator.Current;
+            }
+        }
     }
 }

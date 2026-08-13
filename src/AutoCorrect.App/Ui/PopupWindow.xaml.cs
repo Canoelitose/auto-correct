@@ -28,6 +28,7 @@ public partial class PopupWindow : Window
     private const int OriginalPreviewLength = 400;
 
     private readonly ITextEngine _engine;
+    private readonly Func<string> _engineName;
     private readonly TextInjector _injector;
     private readonly DispatcherTimer _flushTimer;
     private readonly StringBuilder _pending = new();
@@ -49,9 +50,14 @@ public partial class PopupWindow : Window
     private bool _sessionActive;
     private bool _applying;
 
-    public PopupWindow(ITextEngine engine, TextInjector injector)
+    /// <param name="engineName">
+    /// Supplies the engine that actually answered. With a fallback chain the name is only known
+    /// after a run, and the status line should show what was really used.
+    /// </param>
+    public PopupWindow(ITextEngine engine, TextInjector injector, Func<string>? engineName = null)
     {
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+        _engineName = engineName ?? (() => engine.Name);
         _injector = injector ?? throw new ArgumentNullException(nameof(injector));
 
         InitializeComponent();
@@ -241,7 +247,8 @@ public partial class PopupWindow : Window
             FlushPending();
 
             var unchanged = string.Equals(ResultBox.Text, _original, StringComparison.Ordinal);
-            SetStatus($"{_engine.Name} · {UiText.ModeLabel(mode)} · " +
+            EngineLabel.Text = _engineName();
+            SetStatus($"{_engineName()} · {UiText.ModeLabel(mode)} · " +
                       (unchanged ? UiText.StatusNoChange : UiText.StatusDone));
         }
         catch (OperationCanceledException)

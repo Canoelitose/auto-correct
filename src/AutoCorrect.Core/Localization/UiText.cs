@@ -164,6 +164,13 @@ public static class UiText
         "LanguageTool is not running. Without the local server no text can be corrected – " +
         "see docs/SETUP-LANGUAGETOOL.md.");
 
+    public static string NoSpellCheckLanguage => T(
+        "Windows hat für diese Sprache keine Rechtschreibprüfung installiert. " +
+        "Unter Einstellungen → Zeit und Sprache → Sprache lässt sie sich nachinstallieren, " +
+        "oder Sie richten LanguageTool ein.",
+        "Windows has no spell checking installed for this language. It can be added under " +
+        "Settings → Time & language → Language, or you can set up LanguageTool.");
+
     public static string ModeNotSupported => T(
         "Für diesen Modus ist keine Engine verfügbar.",
         "No engine is available for this mode.");

@@ -13,12 +13,17 @@ namespace AutoCorrect.App.Engines;
 /// </summary>
 internal static class EngineFactory
 {
-    public static ITextEngine CreateRouter(HttpClient http, Func<AppSettings> settings)
+    public static EngineRouter CreateRouter(HttpClient http, Func<AppSettings> settings)
     {
         ArgumentNullException.ThrowIfNull(http);
         ArgumentNullException.ThrowIfNull(settings);
 
-        return new EngineRouter(new LanguageToolEngine(http, settings));
+        // Order matters: LanguageTool also finds grammar problems and wins when it is running.
+        // The Windows spell checker needs no installation at all and catches the common case of
+        // a fresh download without any server.
+        return new EngineRouter(
+            new LanguageToolEngine(http, settings),
+            new WindowsSpellCheckEngine(settings));
     }
 
     /// <summary>

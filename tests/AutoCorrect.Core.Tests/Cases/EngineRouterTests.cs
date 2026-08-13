@@ -61,6 +61,54 @@ public static class EngineRouterTests
             Assert.True(await new EngineRouter(offline, online).IsAvailableAsync(CancellationToken.None));
         });
 
+        runner.Add("Router: falls back to the next engine when the first is unavailable", async () =>
+        {
+            var offline = new FailingEngine(ProcessingMode.Correct);
+            var backup = new StubEngine("Backup", ProcessingMode.Correct) { Chunks = ["Ersatz"] };
+            var router = new EngineRouter(offline, backup);
+
+            Assert.Equal("Ersatz", await Collect(router, ProcessingMode.Correct));
+            Assert.Equal("Backup", router.LastUsedName);
+        });
+
+        runner.Add("Router: the last engine's failure is reported", async () =>
+        {
+            var router = new EngineRouter(
+                new FailingEngine(ProcessingMode.Correct),
+                new FailingEngine(ProcessingMode.Correct));
+
+            await Assert.ThrowsAsync<EngineUnavailableException>(async () =>
+            {
+                await foreach (var _ in router.ProcessAsync("x", ProcessingMode.Correct, CancellationToken.None))
+                {
+                }
+            });
+        });
+
+        runner.Add("Router: no fallback once output has been produced", async () =>
+        {
+            // Switching engines mid result would glue two different answers together.
+            var halfway = new HalfwayFailingEngine();
+            var backup = new StubEngine("Backup", ProcessingMode.Correct);
+            var router = new EngineRouter(halfway, backup);
+
+            await Assert.ThrowsAsync<EngineUnavailableException>(async () =>
+            {
+                await foreach (var _ in router.ProcessAsync("x", ProcessingMode.Correct, CancellationToken.None))
+                {
+                }
+            });
+        });
+
+        runner.Add("Router: reports which engine answered", async () =>
+        {
+            var router = new EngineRouter(new StubEngine("Backup", ProcessingMode.Correct));
+            Assert.True(router.LastUsedName is null, "nothing ran yet");
+
+            await Collect(router, ProcessingMode.Correct);
+            Assert.Equal("Backup", router.LastUsedName);
+        });
+
         runner.Add("Router: streamed chunks are passed through in order", async () =>
         {
             var engine = new StubEngine("Streamer", ProcessingMode.Rephrase) { Chunks = ["Das ", "ist ", "ein Test."] };
@@ -79,6 +127,52 @@ public static class EngineRouterTests
         }
 
         return text.ToString();
+    }
+
+    /// <summary>Always reports its service as unreachable.</summary>
+    private sealed class FailingEngine : ITextEngine
+    {
+        private readonly HashSet<ProcessingMode> _modes;
+
+        public FailingEngine(params ProcessingMode[] modes) => _modes = new HashSet<ProcessingMode>(modes);
+
+        public string Name => "Offline";
+
+        public bool SupportsMode(ProcessingMode mode) => _modes.Contains(mode);
+
+        public Task<bool> IsAvailableAsync(CancellationToken ct) => Task.FromResult(false);
+
+        public async IAsyncEnumerable<string> ProcessAsync(
+            string input,
+            ProcessingMode mode,
+            [EnumeratorCancellation] CancellationToken ct)
+        {
+            await Task.Yield();
+            throw new EngineUnavailableException("not reachable");
+#pragma warning disable CS0162
+            yield break;
+#pragma warning restore CS0162
+        }
+    }
+
+    /// <summary>Yields one chunk and only then fails.</summary>
+    private sealed class HalfwayFailingEngine : ITextEngine
+    {
+        public string Name => "Halfway";
+
+        public bool SupportsMode(ProcessingMode mode) => mode == ProcessingMode.Correct;
+
+        public Task<bool> IsAvailableAsync(CancellationToken ct) => Task.FromResult(true);
+
+        public async IAsyncEnumerable<string> ProcessAsync(
+            string input,
+            ProcessingMode mode,
+            [EnumeratorCancellation] CancellationToken ct)
+        {
+            await Task.Yield();
+            yield return "Anfang ";
+            throw new EngineUnavailableException("died halfway");
+        }
     }
 
     private sealed class StubEngine : ITextEngine

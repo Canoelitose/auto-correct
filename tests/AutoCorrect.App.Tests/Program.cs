@@ -29,6 +29,7 @@ public static class Program
 
                 EnvironmentTests.Register(runner);
                 AutoStartTests.Register(runner);
+                SpellCheckTests.Register(runner);
                 MessageWindowTests.Register(runner);
                 HotkeyTests.Register(runner);
                 TrayIconTests.Register(runner);

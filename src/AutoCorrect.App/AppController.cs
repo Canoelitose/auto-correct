@@ -28,7 +28,7 @@ public sealed class AppController : IDisposable
     private readonly TrayIcon _tray;
     private readonly SelectionCapture _capture = new();
     private readonly TextInjector _injector = new();
-    private readonly ITextEngine _engine;
+    private readonly EngineRouter _engine;
 
     private PopupWindow _popup;
 
@@ -177,7 +177,7 @@ public sealed class AppController : IDisposable
 
     private PopupWindow CreatePopup()
     {
-        var popup = new PopupWindow(_engine, _injector);
+        var popup = new PopupWindow(_engine, _injector, () => _engine.LastUsedName ?? _engine.Name);
         popup.Warmup();
         return popup;
     }
