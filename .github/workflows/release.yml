@@ -39,8 +39,15 @@ jobs:
       - name: Build
         run: dotnet build AutoCorrect.sln -c Release --no-restore
 
-      - name: Test
+      - name: Logic and language tests
         run: dotnet run --project tests/AutoCorrect.Core.Tests -c Release --no-build
+
+      - name: Windows tests (tray, hotkeys, clipboard, popup, insertion)
+        shell: pwsh
+        run: |
+          $exe = 'tests/AutoCorrect.App.Tests/bin/Release/net8.0-windows/AutoCorrect.App.Tests.exe'
+          & $exe
+          if ($LASTEXITCODE -ne 0) { throw "Windows tests failed with exit code $LASTEXITCODE" }
 
       - name: Publish self-contained (no runtime needed on the target machine)
         run: >

@@ -7,14 +7,16 @@ bzw. im lokalen Netz – es gehen keine Daten an externe Dienste.
 **Deutsch und Englisch in einer Exe** – Oberfläche umschaltbar, Textsprache wird automatisch
 erkannt.
 
-**Status: Phase 1 fertig und lauffähig.** Phase 2 (lokales Sprachmodell mit Streaming) und
-Phase 3 (Fähigkeitsprüfung, Verteilung) sind vorbereitet, aber noch nicht implementiert.
+**Status: Phase 1 fertig.** Bei jedem Push laufen auf einem Windows-Rechner die Logik-,
+Sprach- und Windows-Tests, dazu ein Start der fertigen Exe. Phase 2 (lokales Sprachmodell mit
+Streaming) und Phase 3 (Fähigkeitsprüfung, Verteilung) sind vorbereitet, aber noch nicht
+implementiert.
 
 ---
 
 ## Download
 
-Fertige Exe unter [Releases](https://github.com/Canoelitose/auto-correct/releases):
+**[→ Neueste Version herunterladen](https://github.com/Canoelitose/auto-correct/releases/latest)**
 
 | Datei | Grösse | Voraussetzung |
 |---|---|---|
