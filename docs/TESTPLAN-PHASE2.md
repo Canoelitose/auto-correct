@@ -117,6 +117,7 @@ Der Teil, bei dem ein Fehler echten Schaden anrichtet: was hinausgeht, muss stim
 | 4b.7 | Eigenen Begriff unter *Immer ersetzen* eintragen, im Text verwenden | im Mitschnitt ersetzt |
 | 4b.8 | *Namen ersetzen* auf *Nie*, gleicher Text | Statuszeile ohne den Zusatz, Namen gehen hinaus |
 | 4b.9 | Adresse zurück auf `localhost`, *Automatisch* | keine Maskierung, Namen bleiben im Prompt |
+| 4b.9a | Adresse `localhost`, Modell `kimi-k3:cloud`, *Automatisch* | **doch** maskiert: die Adresse ist lokal, das Modell nicht |
 | 4b.10 | Falschen API-Schlüssel eintragen | Meldung „Zugang abgelehnt", **nicht** „Modell nicht installiert" |
 | 4b.11 | Protokoll nach allen Versuchen durchsuchen | weder der API-Schlüssel noch ein Klartextname darin |
 

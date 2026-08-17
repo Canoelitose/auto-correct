@@ -294,6 +294,41 @@ public static class PrivacyMaskTests
             Assert.True(LlmEngine.MasksNames(hosted));
         });
 
+        runner.Add("Mask: a cloud model on a local address is still masked", () =>
+        {
+            // Ollama serves its hosted models through the same localhost address as the local
+            // ones. Judging by the address alone would report "kimi-k3:cloud" as local and
+            // switch the masking off while the text travels to a data centre.
+            var settings = new AppSettings
+            {
+                LlmEndpoint = "http://localhost:11434/v1",
+                LlmModel = "kimi-k3:cloud",
+            };
+
+            Assert.True(LlmEngine.MasksNames(settings));
+            Assert.True(LlmEngine.MasksNames(settings, "kimi-k3:cloud"));
+        });
+
+        runner.Add("Mask: a local model on a local address is not masked", () =>
+        {
+            var settings = new AppSettings { LlmEndpoint = "http://localhost:11434/v1" };
+
+            Assert.False(LlmEngine.MasksNames(settings, "qwen2.5:3b"));
+            Assert.False(LlmEngine.MasksNames(settings, "llama3.2:1b"));
+        });
+
+        runner.Add("Mask: only the tag counts as cloud, not the word inside a name", () =>
+        {
+            Assert.True(LlmEngine.IsHostedModel("kimi-k3:cloud"));
+            Assert.True(LlmEngine.IsHostedModel("gpt-oss:120b-cloud"));
+
+            // A model that merely has "cloud" somewhere in its name is not hosted.
+            Assert.False(LlmEngine.IsHostedModel("cloudy-llama:7b"));
+            Assert.False(LlmEngine.IsHostedModel("qwen2.5:3b"));
+            Assert.False(LlmEngine.IsHostedModel(""));
+            Assert.False(LlmEngine.IsHostedModel(null));
+        });
+
         runner.Add("Mask: always and never override the automatic decision", () =>
         {
             var always = new AppSettings

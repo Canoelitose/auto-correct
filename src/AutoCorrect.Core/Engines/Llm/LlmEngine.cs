@@ -160,7 +160,7 @@ public sealed class LlmEngine : ITextEngine
 
         // Masked before anything is sent, and only the masked text ever reaches the endpoint.
         var settings = _settingsProvider();
-        var mask = MasksNames(settings)
+        var mask = MasksNames(settings, model)
             ? PrivacyMask.Create(input, settings.LlmProtectedTerms, _knowledge)
             : null;
         var sent = mask?.Masked ?? input;
@@ -501,16 +501,41 @@ public sealed class LlmEngine : ITextEngine
     }
 
     /// <summary>
-    /// Whether the details are replaced before sending. "auto" means: only when the endpoint is
-    /// not on this machine or the local network, because a local model sees the text regardless
-    /// and masking costs a little accuracy.
+    /// Whether the details are replaced before sending. "auto" means: whenever the text leaves
+    /// this machine - which is not the same question as "is the address remote".
     /// </summary>
-    internal static bool MasksNames(AppSettings settings) => settings.LlmMaskNames switch
+    /// <param name="model">
+    /// The model that will actually answer. It matters: Ollama serves its hosted models through
+    /// the same localhost address as the local ones, so the address alone would report a cloud
+    /// model as local and quietly switch the masking off.
+    /// </param>
+    internal static bool MasksNames(AppSettings settings, string? model = null) => settings.LlmMaskNames switch
     {
         AppSettings.MaskNamesAlways => true,
         AppSettings.MaskNamesNever => false,
-        _ => IsExternal(settings.LlmEndpoint),
+        _ => IsExternal(settings.LlmEndpoint) || IsHostedModel(model ?? settings.LlmModel),
     };
+
+    /// <summary>
+    /// True for a model that runs on someone else's machine despite a local address. Ollama
+    /// marks these with the tag "cloud" - "kimi-k3:cloud" is fetched through localhost:11434
+    /// but answered in a data centre, and the text goes there with it.
+    /// </summary>
+    internal static bool IsHostedModel(string? model)
+    {
+        if (string.IsNullOrWhiteSpace(model))
+        {
+            return false;
+        }
+
+        var separator = model.LastIndexOfAny([':', '-']);
+        if (separator < 0)
+        {
+            return false;
+        }
+
+        return model.AsSpan(separator + 1).Trim().Equals("cloud", StringComparison.OrdinalIgnoreCase);
+    }
 
     /// <summary>True when the address is neither this machine nor the local network.</summary>
     internal static bool IsExternal(string? endpoint)

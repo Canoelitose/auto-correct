@@ -84,6 +84,28 @@ ist der eingetragene Name nicht installiert, wird automatisch ein vorhandenes Mo
 
 ---
 
+## Achtung: „cloud"-Modelle sind nicht lokal
+
+Ollama bietet inzwischen auch Modelle an, die **nicht** heruntergeladen werden, sondern auf
+Ollamas Servern laufen. Erkennbar am Tag `cloud`:
+
+```
+kimi-k3:cloud          läuft in Ollamas Rechenzentrum, braucht ein Pro-/Max-Abo
+qwen2.5:3b             läuft auf deinem Rechner
+```
+
+Der Haken: beide werden über dieselbe Adresse `localhost:11434` angesprochen. Es sieht also
+lokal aus, ist es aber nicht – dein Text geht bei einem `:cloud`-Modell hinaus.
+
+AutoCorrect achtet deshalb nicht nur auf die Adresse, sondern auch auf den Modellnamen: bei
+einem `:cloud`-Modell greift die Namensmaskierung genauso wie bei einem gehosteten Dienst,
+obwohl die Adresse lokal ist. In der Statuszeile steht dann *Namen ersetzt*.
+
+Wenn du sicher lokal bleiben willst, nimm ein Modell **ohne** `:cloud` im Namen. `ollama list`
+zeigt, was wirklich auf deinem Rechner liegt.
+
+---
+
 ## Warum dauert der erste Aufruf so lange?
 
 Ollama lädt das Modell erst beim ersten Aufruf in den Speicher. Das dauert je nach Rechner

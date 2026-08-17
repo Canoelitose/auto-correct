@@ -139,6 +139,16 @@ Deshalb geht es andersherum: dein Schlüssel, ein Feld, der Rest stellt sich sel
 
 ---
 
+## Ollamas eigene Cloud-Modelle
+
+Ollama bietet Modelle mit dem Tag `cloud` an (`kimi-k3:cloud` und ähnliche). Die laufen auf
+Ollamas Servern, brauchen ein Abo – und werden trotzdem über `localhost:11434` angesprochen.
+
+Die Adresse sagt hier also nicht die Wahrheit. AutoCorrect schaut deshalb zusätzlich auf den
+Modellnamen: endet er auf `:cloud`, wird maskiert wie bei jedem anderen gehosteten Dienst.
+
+---
+
 ## Andere Anbieter
 
 Alles, was die OpenAI-kompatible Schnittstelle anbietet, funktioniert genauso: Adresse,
