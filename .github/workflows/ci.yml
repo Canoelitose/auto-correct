@@ -28,19 +28,13 @@ jobs:
       - name: Check the workflow files parse
         shell: pwsh
         run: |
-          python -c @"
-          import glob, sys, yaml
-          for path in sorted(glob.glob('.github/workflows/*.yml')):
-              try:
-                  name = yaml.safe_load(open(path, encoding='utf-8')).get('name')
-              except Exception as error:
-                  print(f'{path}: {error}')
-                  sys.exit(1)
-              if not name:
-                  print(f'{path}: no name')
-                  sys.exit(1)
-              print(f'{path} -> {name}')
-          "@
+          # PyYAML is not on the runner by default; it is a small pure-Python package and the
+          # alternative is having no check at all.
+          python -m pip install --quiet --disable-pip-version-check pyyaml
+          if ($LASTEXITCODE -ne 0) { throw "pyyaml could not be installed" }
+
+          python .github/check-workflows.py
+          if ($LASTEXITCODE -ne 0) { throw "a workflow file does not parse" }
 
       - name: Restore
         run: dotnet restore AutoCorrect.sln
