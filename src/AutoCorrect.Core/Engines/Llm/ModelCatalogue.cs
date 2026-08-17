@@ -111,12 +111,22 @@ internal static class ModelCatalogue
         return true;
     }
 
-    /// <summary>Position in <see cref="PreferredFamilies"/>, or one past the end when unknown.</summary>
-    private static int FamilyRank(string name)
+    /// <summary>
+    /// Position in <see cref="PreferredFamilies"/>, or one past the end when unknown.
+    ///
+    /// Hosted catalogues prefix the family with the publisher - "meta/llama-3.1-8b-instruct",
+    /// "qwen/qwen2.5-7b-instruct" - so the family is looked for after a slash as well. Matching
+    /// only the start of the name would rank every hosted model as unknown.
+    /// </summary>
+    internal static int FamilyRank(string name)
     {
+        var afterSlash = name.LastIndexOf('/');
+        var bare = afterSlash >= 0 ? name[(afterSlash + 1)..] : name;
+
         for (var index = 0; index < PreferredFamilies.Length; index++)
         {
-            if (name.StartsWith(PreferredFamilies[index], StringComparison.OrdinalIgnoreCase))
+            if (name.StartsWith(PreferredFamilies[index], StringComparison.OrdinalIgnoreCase) ||
+                bare.StartsWith(PreferredFamilies[index], StringComparison.OrdinalIgnoreCase))
             {
                 return index;
             }

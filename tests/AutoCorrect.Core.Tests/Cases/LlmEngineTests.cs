@@ -309,6 +309,50 @@ public static class LlmEngineTests
             Assert.Contains("Anna Meier", second);
         });
 
+        runner.Add("LLM: an environment variable supplies the key without a settings file", async () =>
+        {
+            // Lets the key stay out of settings.json entirely - useful on a shared machine and
+            // for anyone who does not want a credential sitting in a config file.
+            using var server = FakeLlmServer.Streaming("ok");
+            server.RequiredKey = "aus-der-umgebung";
+
+            var settings = new AppSettings { LlmEndpoint = server.Endpoint };
+            using var http = new HttpClient();
+            var engine = new LlmEngine(http, () => settings);
+
+            Environment.SetEnvironmentVariable(LlmEngine.ApiKeyVariable, "aus-der-umgebung");
+
+            try
+            {
+                await DrainAsync(engine, "Test", ProcessingMode.Rephrase);
+                Assert.Equal("Bearer aus-der-umgebung", server.LastAuthorization);
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(LlmEngine.ApiKeyVariable, null);
+            }
+        });
+
+        runner.Add("LLM: the environment variable wins over the stored key", async () =>
+        {
+            using var server = FakeLlmServer.Streaming("ok");
+            var settings = new AppSettings { LlmEndpoint = server.Endpoint, LlmApiKey = "aus-der-datei" };
+            using var http = new HttpClient();
+            var engine = new LlmEngine(http, () => settings);
+
+            Environment.SetEnvironmentVariable(LlmEngine.ApiKeyVariable, "aus-der-umgebung");
+
+            try
+            {
+                await DrainAsync(engine, "Test", ProcessingMode.Rephrase);
+                Assert.Equal("Bearer aus-der-umgebung", server.LastAuthorization);
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(LlmEngine.ApiKeyVariable, null);
+            }
+        });
+
         // ------------------------------------------------------------ choosing a model
 
         runner.Add("LLM: an installed model is used even under a different name", async () =>

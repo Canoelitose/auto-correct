@@ -171,19 +171,36 @@ jobs:
             Der Name muss nicht stimmen: ist bereits ein anderes Modell installiert, wird es
             automatisch benutzt.
 
+            ## Optional: gehosteter Dienst statt lokalem Modell
+
+            Wer kein Modell herunterladen will, kann einen gehosteten Dienst nutzen. Bei NVIDIA
+            reicht der API-Schlüssel: in den Einstellungen unter *API-Schlüssel* einfügen,
+            Adresse und Modell stellen sich selbst ein.
+
+            Dann verlässt der Text den Rechner. AutoCorrect ersetzt vorher Namen, E-Mail-Adressen,
+            Telefonnummern und IBAN durch Platzhalter und setzt sie im Ergebnis wieder ein – was
+            das leistet und was nicht, steht in
+            [docs/SETUP-CLOUD.md](https://github.com/${{ github.repository }}/blob/${{ env.TAG }}/docs/SETUP-CLOUD.md).
+
             Es läuft auf deinem Rechner, es gehen weiterhin keine Daten an externe Dienste.
             Anleitung inklusive Modellvergleich: [docs/SETUP-OLLAMA.md](https://github.com/${{ github.repository }}/blob/${{ env.TAG }}/docs/SETUP-OLLAMA.md)
 
             ## Benutzen
 
-            **Wichtig:** AutoCorrect hat kein eigenes Fenster. Nach dem Start erscheint beim
-            ersten Mal ein kurzes Begrüssungsfenster, danach läuft es nur noch als Symbol im
-            Infobereich der Taskleiste (rechts unten neben der Uhr). Unter Windows 11 versteckt
-            Windows neue Symbole hinter dem Pfeil `^` – von dort lässt es sich auf die
-            Taskleiste ziehen.
+            Zwei Wege, beide gehen sofort:
+
+            - **Per Hotkey in jedem Programm** – Text markieren, `Win + Leertaste`, fertig.
+            - **Im eigenen Fenster** – Doppelklick aufs Symbol im Infobereich der Taskleiste
+              öffnet ein Fenster, in das du Text einfügst oder tippst.
+
+            AutoCorrect läuft als Symbol im Infobereich (rechts unten neben der Uhr). Unter
+            Windows 11 versteckt Windows neue Symbole hinter dem Pfeil `^` – von dort lässt es
+            sich auf die Taskleiste ziehen. Das Fenster zu schliessen beendet das Programm
+            **nicht**; dafür ist *Beenden* im Rechtsklick-Menü da.
 
             | Taste | Wirkung |
             |---|---|
+            | Doppelklick aufs Symbol | Fenster zum direkten Bearbeiten |
             | `Win + Leertaste` | Text markieren, Hotkey drücken, Popup mit der Korrektur erscheint |
             | `Ctrl + Alt + R` | direkt in den Modus *Umformulieren* |
             | `Enter` | Ergebnis übernehmen und einfügen |

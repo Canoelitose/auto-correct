@@ -22,6 +22,16 @@ public sealed class LlmEngine : ITextEngine
     public const string DefaultEndpoint = "http://localhost:11434/v1";
 
     /// <summary>
+    /// NVIDIA's OpenAI compatible address. Known here only so that pasting a key is enough:
+    /// a key beginning with "nvapi-" tells us where it belongs, and asking the user to also
+    /// find and type this URL would be busywork.
+    /// </summary>
+    public const string NvidiaEndpoint = "https://integrate.api.nvidia.com/v1";
+
+    /// <summary>Prefix NVIDIA gives its keys.</summary>
+    public const string NvidiaKeyPrefix = "nvapi-";
+
+    /// <summary>
     /// Short tag on purpose. "qwen2.5:3b-instruct-q4_K_M" names the same weights but has to be
     /// typed exactly, and getting it slightly wrong produced a "model not loaded" error next to
     /// a perfectly good installation.
@@ -458,6 +468,21 @@ public sealed class LlmEngine : ITextEngine
         _resolvedModel = null;
     }
 
+    /// <summary>Name of the variable that supplies the key without putting it in a file.</summary>
+    public const string ApiKeyVariable = "AUTOCORRECT_LLM_API_KEY";
+
+    /// <summary>
+    /// The key in use: the environment variable wins over the settings file, so a key can be
+    /// supplied per machine or per session without ever being written to disk.
+    /// </summary>
+    internal static string ApiKeyOf(AppSettings settings)
+    {
+        var fromEnvironment = Environment.GetEnvironmentVariable(ApiKeyVariable)?.Trim();
+        return string.IsNullOrEmpty(fromEnvironment)
+            ? settings.LlmApiKey?.Trim() ?? string.Empty
+            : fromEnvironment;
+    }
+
     /// <summary>
     /// Adds the bearer token when one is configured. Set per request rather than on the shared
     /// client, so a changed key takes effect without a restart.
@@ -466,7 +491,7 @@ public sealed class LlmEngine : ITextEngine
     /// </summary>
     private static void Authorize(HttpRequestMessage message, AppSettings settings)
     {
-        var key = settings.LlmApiKey?.Trim();
+        var key = ApiKeyOf(settings);
         if (string.IsNullOrEmpty(key))
         {
             return;

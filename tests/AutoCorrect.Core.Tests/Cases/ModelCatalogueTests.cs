@@ -65,6 +65,20 @@ public static class ModelCatalogueTests
             Assert.Equal("solar:10.7b", ModelCatalogue.Choose("nicht-da", ["solar:10.7b"]));
         });
 
+        runner.Add("Models: a hosted catalogue name is ranked by its family", () =>
+        {
+            // NVIDIA and friends prefix the publisher: "meta/llama-3.1-8b-instruct". Matching
+            // only the start of the name would rank every hosted model as unknown, and the
+            // choice would fall back to whatever happens to be smallest.
+            Assert.Equal(
+                "qwen/qwen2.5-7b-instruct",
+                ModelCatalogue.Choose("nicht-da", ["mistralai/mistral-7b", "qwen/qwen2.5-7b-instruct"]));
+
+            Assert.Equal(
+                "meta/llama-3.2-3b-instruct",
+                ModelCatalogue.Choose("nicht-da", ["nvidia/nemotron-4-340b", "meta/llama-3.2-3b-instruct"]));
+        });
+
         runner.Add("Models: the size is read out of the tag", () =>
         {
             Assert.Equal(3d, ModelCatalogue.SizeInBillions("qwen2.5:3b"));

@@ -342,10 +342,12 @@ public static class UiText
     public static string SettingsLlmApiKey => T("API-Schlüssel (optional)", "API key (optional)");
 
     public static string SettingsLlmApiKeyHint => T(
-        "Leer lassen für Ollama auf diesem Rechner. Nötig nur für Endpunkte, die einen Schlüssel " +
-        "verlangen. Achtung: ein Dienst im Internet bekommt den markierten Text zu sehen.",
-        "Leave empty for Ollama on this machine. Only needed for endpoints that require a key. " +
-        "Note: a service on the internet gets to see the selected text.");
+        "Leer lassen für Ollama auf diesem Rechner. Einen NVIDIA-Schlüssel (nvapi-…) einfach hier " +
+        "einfügen – Adresse und Modell stellen sich dann selbst ein. Achtung: ein Dienst im " +
+        "Internet bekommt den Text zu sehen, Namen werden vorher ersetzt.",
+        "Leave empty for Ollama on this machine. Just paste an NVIDIA key (nvapi-…) here – the " +
+        "address and model then set themselves. Note: a service on the internet gets to see the " +
+        "text; names are replaced first.");
 
     public static string SettingsMaskNames => T("Namen vor dem Senden ersetzen", "Replace names before sending");
 

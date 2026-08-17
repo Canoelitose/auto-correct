@@ -1,4 +1,5 @@
 using AutoCorrect.Core.Configuration;
+using AutoCorrect.Core.Engines.Llm;
 using AutoCorrect.Core.Diagnostics;
 
 namespace AutoCorrect.Core.Tests.Cases;
@@ -167,6 +168,53 @@ public static class SettingsStoreTests
             Assert.Equal(AppSettings.MaskNamesAlways, read.LlmMaskNames);
             Assert.Equal(2, read.LlmProtectedTerms.Count);
             Assert.Contains("Zwiebelturm", string.Join(",", read.LlmProtectedTerms));
+        });
+
+        runner.Add("Settings: an NVIDIA key sets the address by itself", () =>
+        {
+            // Pasting the key is the whole setup: the key says where it belongs, so making the
+            // user find and type the address as well would be busywork.
+            var settings = new AppSettings { LlmApiKey = "nvapi-abcdef" };
+            settings.Normalize();
+
+            Assert.Equal(LlmEngine.NvidiaEndpoint, settings.LlmEndpoint);
+
+            // The local model name means nothing there; the catalogue picks from what is offered.
+            Assert.Equal("", settings.LlmModel);
+        });
+
+        runner.Add("Settings: an address the user chose is never overwritten by a key", () =>
+        {
+            var settings = new AppSettings
+            {
+                LlmApiKey = "nvapi-abcdef",
+                LlmEndpoint = "http://192.168.1.20:11434/v1",
+            };
+            settings.Normalize();
+
+            Assert.Equal("http://192.168.1.20:11434/v1", settings.LlmEndpoint);
+        });
+
+        runner.Add("Settings: a chosen model survives the key too", () =>
+        {
+            var settings = new AppSettings
+            {
+                LlmApiKey = "nvapi-abcdef",
+                LlmModel = "meta/llama-3.1-8b-instruct",
+            };
+            settings.Normalize();
+
+            Assert.Equal(LlmEngine.NvidiaEndpoint, settings.LlmEndpoint);
+            Assert.Equal("meta/llama-3.1-8b-instruct", settings.LlmModel);
+        });
+
+        runner.Add("Settings: without a key the local defaults stay in place", () =>
+        {
+            var settings = new AppSettings();
+            settings.Normalize();
+
+            Assert.Equal(LlmEngine.DefaultEndpoint, settings.LlmEndpoint);
+            Assert.Equal(LlmEngine.DefaultModel, settings.LlmModel);
         });
 
         runner.Add("Settings: blank and duplicate protected words are dropped", () =>

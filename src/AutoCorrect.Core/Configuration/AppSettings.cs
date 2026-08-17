@@ -130,7 +130,23 @@ public sealed class AppSettings
             LlmEndpoint = LlmEngine.DefaultEndpoint;
         }
 
-        if (string.IsNullOrWhiteSpace(LlmModel))
+        // A key that says where it belongs saves the user finding and typing the address. Only
+        // while the address is still the local default: an address they chose is never touched.
+        if (LlmApiKey.Trim().StartsWith(LlmEngine.NvidiaKeyPrefix, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(LlmEndpoint, LlmEngine.DefaultEndpoint, StringComparison.OrdinalIgnoreCase))
+        {
+            LlmEndpoint = LlmEngine.NvidiaEndpoint;
+
+            // The local model name means nothing there; the catalogue picks a hosted one.
+            if (string.Equals(LlmModel, LlmEngine.DefaultModel, StringComparison.OrdinalIgnoreCase))
+            {
+                LlmModel = string.Empty;
+            }
+        }
+
+        // Only fall back to the local default while the address is a local one; on a hosted
+        // endpoint an empty name is right, because the catalogue chooses from what is offered.
+        if (string.IsNullOrWhiteSpace(LlmModel) && !LlmEngine.IsExternal(LlmEndpoint))
         {
             LlmModel = LlmEngine.DefaultModel;
         }

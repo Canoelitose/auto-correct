@@ -31,18 +31,25 @@ stehen auf der Seite selbst – sie ändern sich, verlass dich nicht auf diese Z
 
 ### 2. In AutoCorrect eintragen
 
-Tray-Icon → *Einstellungen*:
+Tray-Icon → *Einstellungen* → *API-Schlüssel* → einfügen → *Speichern*. Das ist alles.
 
-| Feld | Wert |
-|---|---|
-| Adresse des Sprachmodells | `https://integrate.api.nvidia.com/v1` |
-| Modell | z. B. `meta/llama-3.1-8b-instruct` oder `qwen/qwen2.5-7b-instruct` |
-| API-Schlüssel | dein `nvapi-…` |
-| Namen vor dem Senden ersetzen | *Automatisch* (bleibt so) |
+Ein Schlüssel, der mit `nvapi-` beginnt, sagt selbst, wohin er gehört: AutoCorrect setzt die
+Adresse auf `https://integrate.api.nvidia.com/v1` und sucht sich aus dem Katalog ein passendes
+Modell. Hast du die Adresse vorher selbst geändert, bleibt sie unangetastet.
 
-Welche Modellnamen es gibt, steht im Katalog auf build.nvidia.com. Trägst du einen Namen ein,
-den es dort nicht gibt, meldet AutoCorrect das – die automatische Auswahl greift nur bei
-Servern, die ihre Modelle auflisten.
+Ein bestimmtes Modell willst du trotzdem? Dann trag es unter *Modell* ein, zum Beispiel
+`meta/llama-3.1-8b-instruct` oder `qwen/qwen2.5-7b-instruct`. Die Namen stehen im Katalog auf
+build.nvidia.com.
+
+**Schlüssel ohne Datei.** Wer den Schlüssel nicht in `settings.json` haben will, setzt
+stattdessen die Umgebungsvariable `AUTOCORRECT_LLM_API_KEY`. Sie hat Vorrang vor dem
+gespeicherten Wert:
+
+```powershell
+[Environment]::SetEnvironmentVariable('AUTOCORRECT_LLM_API_KEY', 'nvapi-…', 'User')
+```
+
+Danach AutoCorrect neu starten.
 
 ### 3. Prüfen
 
@@ -111,6 +118,24 @@ Eine Garantie, dass *wirklich jeder* Name erkannt wird, kann dir niemand geben, 
 nicht versteht – und verstehen würde ihn nur ein Modell, an das man den Text dafür erst schicken
 müsste. Was du sicher kontrollierst, sind die beiden Regler: *Immer ersetzen* für deine festen
 Begriffe, und ein lokales Modell für alles, was gar nicht hinaus soll.
+
+---
+
+## Warum kein Schlüssel mitgeliefert wird
+
+Naheliegende Frage: warum steckt der Gratis-Schlüssel nicht einfach in der Exe? Drei Gründe,
+alle handfest:
+
+- **Er wäre kein Geheimnis.** Die Exe liegt öffentlich auf GitHub. Was drinsteht, lässt sich in
+  Sekunden herauslesen – ein Schlüssel in einer verteilten Datei ist ein veröffentlichter
+  Schlüssel.
+- **Das Kontingent hängt an einem Konto.** Es ist nicht pro Benutzer, sondern pro Schlüssel.
+  Sobald ein paar Leute dieselbe Exe benutzen, ist es aufgebraucht – für alle, auch für den,
+  dem das Konto gehört.
+- **Es verstösst gegen die Bedingungen.** Zugangsdaten weiterzugeben ist bei praktisch jedem
+  Anbieter untersagt; der Schlüssel würde gesperrt, das Konto meist gleich mit.
+
+Deshalb geht es andersherum: dein Schlüssel, ein Feld, der Rest stellt sich selbst ein.
 
 ---
 

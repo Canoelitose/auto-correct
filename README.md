@@ -85,8 +85,9 @@ ollama pull qwen2.5:3b
 Der Name muss nicht stimmen: ist ein anderes Modell installiert, wird es automatisch benutzt.
 Mehr dazu, inklusive Modellvergleich und llama.cpp: [docs/SETUP-OLLAMA.md](docs/SETUP-OLLAMA.md)
 
-Statt lokal geht auch ein gehosteter Dienst – mit Maskierung der Namen und einer ehrlichen
-Liste ihrer Grenzen: [docs/SETUP-CLOUD.md](docs/SETUP-CLOUD.md)
+Statt lokal geht auch ein gehosteter Dienst. Bei NVIDIA reicht dafür der API-Schlüssel in den
+Einstellungen – Adresse und Modell stellen sich selbst ein. Mit Maskierung der Namen und einer
+ehrlichen Liste ihrer Grenzen: [docs/SETUP-CLOUD.md](docs/SETUP-CLOUD.md)
 
 ### 3. AutoCorrect bauen und starten
 
