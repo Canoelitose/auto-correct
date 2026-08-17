@@ -82,6 +82,21 @@ Anführungszeichen. Nichts davon darf im Dokument landen.
 | 4.7 | Sehr langen Text (mehrere Absätze) umformulieren | vollständige Antwort, kein Abbruch nach zwei Minuten |
 | 4.8 | Während der Verarbeitung den Modus wechseln | laufende Anfrage bricht ab, neue startet |
 
+## 4a Das Fenster
+
+| # | Schritt | Erwartet |
+|---|---|---|
+| 4a.1 | Doppelklick aufs Tray-Symbol | Fenster öffnet, Cursor steht im Eingabefeld |
+| 4a.2 | Text einfügen, *Korrigieren* | Ergebnis erscheint wachsend im unteren Feld |
+| 4a.3 | *Weiterbearbeiten* klicken | Ergebnis rutscht nach oben in die Eingabe, unten wird leer |
+| 4a.4 | *Kopieren* klicken, in Word einfügen | der korrigierte Text steht dort |
+| 4a.5 | Fenster mit dem X schliessen | Programm läuft weiter, Hotkey funktioniert weiterhin |
+| 4a.6 | Erneut doppelklicken | Fenster kommt zurück, Inhalt ist noch da |
+| 4a.7 | Bei leerer Eingabe | alle vier Modus-Schaltflächen ausgegraut |
+| 4a.8 | Während der Verarbeitung: Modus-Schaltflächen | ausgegraut, bis die Antwort fertig ist |
+| 4a.9 | Oberflächensprache auf *English* umstellen | Fenster ist danach englisch, ohne Neustart |
+| 4a.10 | Tray → *Beenden* bei offenem Fenster | Fenster schliesst, Prozess ist im Task-Manager weg |
+
 ## 4b Namensmaskierung (nur bei gehostetem Dienst)
 
 Der Teil, bei dem ein Fehler echten Schaden anrichtet: was hinausgeht, muss stimmen.
@@ -92,6 +107,11 @@ Der Teil, bei dem ein Fehler echten Schaden anrichtet: was hinausgeht, muss stim
 | 4b.2 | Netzwerkmitschnitt derselben Anfrage ansehen | im gesendeten Text steht **weder** `Anna` **noch** `Meier` |
 | 4b.3 | Ergebnis im Popup | die echten Namen stehen wieder drin, nie ein Platzhalter |
 | 4b.4 | `Sehr geehrter Herr Brunnenwieser` umformulieren | Nachname wird ersetzt, obwohl er in keiner Liste steht |
+| 4b.4a | `Ich habe mit Brunnenwieser gesprochen.` – ohne Anrede | ebenfalls ersetzt: das Windows-Wörterbuch kennt das Wort nicht |
+| 4b.4b | `Die Rechnnung liegt auf dem Tisch.` (Tippfehler) | **nicht** ersetzt und korrigiert – ein Tippfehler ist kein Name |
+| 4b.4c | `Das PDF der AG im Format A4.` | unverändert – Abkürzungen sind keine Namen |
+| 4b.4d | `Herr Koch ruft an.` | *Koch* wird über die Anrede erkannt … |
+| 4b.4e | `Koch ruft an.` – ohne Anrede | … allein stehend **nicht**, weil es ein Wörterbuchwort ist. Genau dafür ist *Immer ersetzen* da |
 | 4b.5 | Text mit E-Mail, Telefonnummer und IBAN senden | alle drei im Mitschnitt ersetzt |
 | 4b.6 | `Im Jahr 2024 kostete es 1500 Franken.` senden | unverändert – Jahreszahlen und Preise sind keine Telefonnummern |
 | 4b.7 | Eigenen Begriff unter *Immer ersetzen* eintragen, im Text verwenden | im Mitschnitt ersetzt |

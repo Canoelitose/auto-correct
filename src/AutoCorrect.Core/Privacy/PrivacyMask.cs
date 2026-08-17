@@ -16,11 +16,18 @@ namespace AutoCorrect.Core.Privacy;
 /// in the user's document. "Herr Muster" is just a sentence, so grammar, case and agreement
 /// survive the round trip and the swap back is a plain string replacement.
 ///
-/// **What it does not do.** This is pattern matching, not understanding. It finds a person by a
-/// known first name, by a salutation in front of the word, or because you listed the word
-/// yourself - so a surname standing alone in an unusual sentence can slip through. It reduces
-/// what a service gets to see; it is not a guarantee, and it is not anonymisation in the legal
-/// sense. Text that must not leave the device belongs on a local model.
+/// **How a name is found.** Four ways, and the last one does most of the work:
+/// a known first name, a salutation in front of the word, a word the user listed, or - when a
+/// dictionary is available - a capitalised word that no dictionary knows. In German every noun
+/// is capitalised, so capitalisation alone says nothing; "not a word in any dictionary" is what
+/// separates "Brunnenwieser" from "Rechnung".
+///
+/// **What it does not do.** This is still pattern matching, not understanding. A surname that
+/// happens to be an ordinary word passes - Herr Koch, Frau Berg, Mr Baker - unless a salutation
+/// or a first name introduces it. Addresses and dates of birth are not recognised at all, and
+/// the rest of the sentence goes out as written. It reduces what a service gets to see; it is
+/// not a guarantee, and it is not anonymisation in the legal sense. Text that must not leave
+/// the device belongs on a local model.
 /// </summary>
 public sealed class PrivacyMask
 {
@@ -68,7 +75,15 @@ public sealed class PrivacyMask
     /// </summary>
     /// <param name="input">The user's text.</param>
     /// <param name="protectedTerms">Words the user always wants replaced, whatever they are.</param>
-    public static PrivacyMask Create(string input, IReadOnlyList<string>? protectedTerms = null)
+    /// <param name="knowledge">
+    /// Optional dictionary. With it, a capitalised word that no dictionary knows is treated as
+    /// a name - which is what catches surnames nobody could put on a list. Without it, only the
+    /// first-name list, salutations and the user's own words are used.
+    /// </param>
+    public static PrivacyMask Create(
+        string input,
+        IReadOnlyList<string>? protectedTerms = null,
+        IWordKnowledge? knowledge = null)
     {
         ArgumentNullException.ThrowIfNull(input);
 
@@ -77,6 +92,7 @@ public sealed class PrivacyMask
         CollectProtectedTerms(input, protectedTerms, spans);
         CollectContacts(input, spans);
         CollectPeople(input, spans);
+        CollectUnknownCapitalised(input, knowledge, spans);
 
         if (spans.Count == 0)
         {
@@ -392,6 +408,72 @@ public sealed class PrivacyMask
 
             index = end;
         }
+    }
+
+    /// <summary>
+    /// Capitalised words that no dictionary knows. This is the rule that catches a surname
+    /// nobody listed and no first name introduced - "Ich habe mit Brunnenwieser gesprochen."
+    ///
+    /// Everything that is capitalised for another reason has to survive: abbreviations, product
+    /// names in capitals, anything with a digit in it, and above all a merely misspelled noun,
+    /// which the dictionary recognises as close to a real word.
+    /// </summary>
+    private static void CollectUnknownCapitalised(string input, IWordKnowledge? knowledge, List<Span> spans)
+    {
+        if (knowledge is null)
+        {
+            return;
+        }
+
+        var index = 0;
+
+        while (index < input.Length)
+        {
+            if (!IsWordStart(input, index) || !char.IsUpper(input[index]))
+            {
+                index++;
+                continue;
+            }
+
+            var end = WordEnd(input, index);
+            var word = input[index..end];
+
+            if (CanBeAName(word) && !knowledge.IsDictionaryWord(word))
+            {
+                spans.Add(new Span(index, end - index, SpanKind.Surname));
+            }
+
+            index = Math.Max(end, index + 1);
+        }
+    }
+
+    /// <summary>Shape test before the dictionary is asked at all.</summary>
+    private static bool CanBeAName(string word)
+    {
+        // Two letters is an abbreviation or an initial, not something worth masking.
+        if (word.Length < 3)
+        {
+            return false;
+        }
+
+        var lowerCount = 0;
+
+        foreach (var c in word)
+        {
+            if (char.IsDigit(c))
+            {
+                // "Version2", "A4" - not a person.
+                return false;
+            }
+
+            if (char.IsLower(c))
+            {
+                lowerCount++;
+            }
+        }
+
+        // All capitals is an abbreviation: GMBH, PDF, AG. A name has lower case letters in it.
+        return lowerCount > 0;
     }
 
     // ---------------------------------------------------------------- building

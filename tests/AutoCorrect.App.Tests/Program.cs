@@ -37,6 +37,7 @@ public static class Program
                 ClipboardTests.Register(runner);
                 ScreenPlacementTests.Register(runner);
                 PopupWindowTests.Register(runner);
+                MainWindowTests.Register(runner);
                 SelectionRoundTripTests.Register(runner);
 
                 Console.WriteLine("AutoCorrect.App tests (Windows only)");

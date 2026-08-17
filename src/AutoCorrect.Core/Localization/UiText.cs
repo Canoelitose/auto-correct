@@ -106,10 +106,12 @@ public static class UiText
         "AutoCorrect is running");
 
     public static string WelcomeIntro => T(
-        "AutoCorrect hat absichtlich kein eigenes Fenster. Es wartet im Hintergrund, bis Sie " +
-        "irgendwo Text markieren und den Hotkey drücken.",
-        "AutoCorrect deliberately has no window of its own. It waits in the background until " +
-        "you select text somewhere and press the hotkey.");
+        "AutoCorrect arbeitet auf zwei Arten: in jedem anderen Programm markieren Sie Text und " +
+        "drücken den Hotkey – oder Sie öffnen das Fenster von AutoCorrect und arbeiten direkt " +
+        "darin. Doppelklick auf das Symbol im Infobereich öffnet es.",
+        "AutoCorrect works in two ways: in any other program, select text and press the hotkey – " +
+        "or open the AutoCorrect window and work in it directly. Double-click the icon in the " +
+        "notification area to open it.");
 
     public static string WelcomeHotkeyCaption => T(
         "Text markieren, dann drücken:",
@@ -119,24 +121,52 @@ public static class UiText
         "Das Symbol liegt im Infobereich der Taskleiste, rechts unten neben der Uhr. " +
         "Windows 11 versteckt neue Symbole hinter dem Pfeil ^ – klicken Sie darauf und ziehen " +
         "Sie das Symbol nach unten auf die Taskleiste, damit es dauerhaft sichtbar bleibt. " +
-        "Rechtsklick auf das Symbol öffnet Einstellungen, Über und Beenden.",
+        "Doppelklick öffnet das Fenster, Rechtsklick das Menü mit Einstellungen und Beenden.",
         "The icon sits in the notification area next to the clock. Windows 11 hides new icons " +
         "behind the ^ arrow – click it and drag the icon down onto the taskbar to keep it " +
-        "visible. Right-click the icon for settings, about and exit.");
+        "visible. Double-click opens the window, right-click the menu with settings and exit.");
 
     public static string WelcomeClose => T("Alles klar", "Got it");
 
     public static string AlreadyRunning => T(
         "AutoCorrect läuft bereits.\n\n" +
-        "Das Symbol liegt im Infobereich der Taskleiste. Unter Windows 11 steckt es " +
-        "möglicherweise hinter dem Pfeil ^ links neben der Uhr.",
+        "Das Symbol liegt im Infobereich der Taskleiste – Doppelklick öffnet das Fenster. " +
+        "Unter Windows 11 steckt es möglicherweise hinter dem Pfeil ^ links neben der Uhr.",
         "AutoCorrect is already running.\n\n" +
-        "The icon sits in the notification area. On Windows 11 it may be hidden behind the " +
-        "^ arrow next to the clock.");
+        "The icon sits in the notification area – double-click it to open the window. On " +
+        "Windows 11 it may be hidden behind the ^ arrow next to the clock.");
 
     public static string TrayStarted(string hotkey) => T(
         $"Läuft. Text markieren und {hotkey} drücken.",
         $"Running. Select text and press {hotkey}.");
+
+    // ---------------------------------------------------------------- main window
+
+    public static string MainTitle => T("Text bearbeiten", "Work on text");
+
+    public static string MainSubtitle => T(
+        "Text einfügen oder tippen, dann einen Modus wählen.",
+        "Paste or type text, then pick a mode.");
+
+    public static string MainHotkeyHint(string hotkey) => T(
+        $"In anderen Programmen geht es schneller: markieren und {hotkey} drücken.",
+        $"In other programs it is quicker: select the text and press {hotkey}.");
+
+    public static string MainInputLabel => T("Ihr Text", "Your text");
+
+    public static string MainResultLabel => T("Ergebnis", "Result");
+
+    public static string MainCopy => T("Kopieren", "Copy");
+
+    public static string MainUseResult => T("Weiterbearbeiten", "Keep working on it");
+
+    public static string MainClear => T("Leeren", "Clear");
+
+    public static string TrayOpenWindow => T("Fenster öffnen", "Open window");
+
+    public static string ClipboardBusy => T(
+        "Die Zwischenablage ist gerade von einem anderen Programm belegt. Bitte nochmals versuchen.",
+        "Another program is holding the clipboard right now. Please try again.");
 
     // ---------------------------------------------------------------- capture
 

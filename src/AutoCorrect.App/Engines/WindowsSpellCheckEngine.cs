@@ -65,6 +65,13 @@ internal sealed class WindowsSpellCheckEngine : ITextEngine
         }
     }
 
+    /// <summary>The cached checker for a language, so other users of the dictionaries share it.</summary>
+    internal static NativeMethods.ISpellChecker? CheckerFor(string languageTag) => Checker(languageTag);
+
+    /// <summary>The languages this machine can check, best first. Empty when there are none.</summary>
+    internal static IReadOnlyList<string> AvailableLanguageTags(Core.Configuration.AppSettings settings) =>
+        new WindowsSpellCheckEngine(() => settings).ResolveTags();
+
     /// <summary>Returns null when Windows has no dictionary for the language.</summary>
     private static NativeMethods.ISpellChecker? Checker(string languageTag)
     {

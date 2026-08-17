@@ -6,6 +6,17 @@ namespace AutoCorrect.Core.Tests.Cases;
 
 public static class PrivacyMaskTests
 {
+    /// <summary>
+    /// Stands in for the Windows dictionaries: it knows a handful of ordinary words and treats
+    /// a near miss as a typo, which is exactly the contract the real one has to fulfil.
+    /// </summary>
+    private static readonly FakeDictionary Dictionary = new(
+    [
+        "Ich", "habe", "gestern", "mit", "über", "die", "Rechnung", "gesprochen", "kommt", "am",
+        "Montag", "Die", "für", "das", "Büro", "kommt", "im", "Januar", "liegt", "auf", "dem",
+        "Tisch", "Das", "und", "brauchen", "Version", "Format", "treffen", "Herrn", "und",
+    ]);
+
     public static void Register(TestRunner runner)
     {
         // ------------------------------------------------------------ what is found
@@ -78,6 +89,64 @@ public static class PrivacyMaskTests
 
             Assert.False(mask.Masked.Contains("6238", StringComparison.Ordinal), mask.Masked);
             Assert.Contains("überweisen.", mask.Masked);
+        });
+
+        // ------------------------------------------------------------ with a dictionary
+
+        runner.Add("Mask: a surname nobody listed is found because it is not a word", () =>
+        {
+            // The rule that does the heavy lifting: German capitalises every noun, so the
+            // question is not "is it capitalised" but "is it a word at all".
+            var mask = PrivacyMask.Create(
+                "Ich habe gestern mit Brunnenwieser über die Rechnung gesprochen.",
+                null,
+                Dictionary);
+
+            Assert.False(mask.Masked.Contains("Brunnenwieser", StringComparison.Ordinal), mask.Masked);
+            Assert.Contains("über die Rechnung gesprochen.", mask.Masked);
+        });
+
+        runner.Add("Mask: ordinary nouns stay even with a dictionary", () =>
+        {
+            const string input = "Die Rechnung für das Büro kommt im Januar.";
+            Assert.Equal(input, PrivacyMask.Create(input, null, Dictionary).Masked);
+        });
+
+        runner.Add("Mask: a misspelled noun is corrected, not masked", () =>
+        {
+            // The trap: treat a typo as a name and it is replaced before sending, so the model
+            // never sees it and the correction silently skips that word.
+            const string input = "Die Rechnnung liegt auf dem Tisch.";
+            Assert.Equal(input, PrivacyMask.Create(input, null, Dictionary).Masked);
+        });
+
+        runner.Add("Mask: abbreviations and product codes are not masked", () =>
+        {
+            // Capitalised, unknown, and not a person.
+            const string input = "Das PDF und die AG brauchen Version2 im Format A4.";
+            Assert.Equal(input, PrivacyMask.Create(input, null, Dictionary).Masked);
+        });
+
+        runner.Add("Mask: a name at the start of a sentence is found too", () =>
+        {
+            var mask = PrivacyMask.Create("Brunnenwieser kommt am Montag.", null, Dictionary);
+            Assert.False(mask.Masked.Contains("Brunnenwieser", StringComparison.Ordinal), mask.Masked);
+        });
+
+        runner.Add("Mask: without a dictionary the same sentence keeps the name", () =>
+        {
+            // Honest about the limit: no dictionary, no detection of an unintroduced surname.
+            const string input = "Ich habe gestern mit Brunnenwieser gesprochen.";
+            Assert.Equal(input, PrivacyMask.Create(input).Masked);
+        });
+
+        runner.Add("Mask: a dictionary round trip still restores exactly", () =>
+        {
+            const string input = "Brunnenwieser und Anna Meier treffen Herrn Hollenstein.";
+            var mask = PrivacyMask.Create(input, null, Dictionary);
+            var restorer = new MaskRestorer(mask);
+
+            Assert.Equal(input, restorer.Push(mask.Masked) + restorer.Finish());
         });
 
         // ------------------------------------------------------------ what is left alone
@@ -248,5 +317,51 @@ public static class PrivacyMaskTests
             settings.Normalize();
             Assert.Equal(AppSettings.MaskNamesAuto, settings.LlmMaskNames);
         });
+    }
+}
+
+/// <summary>A dictionary for the tests: known words, plus anything within one edit of one.</summary>
+internal sealed class FakeDictionary : IWordKnowledge
+{
+    private readonly HashSet<string> _words;
+
+    public FakeDictionary(IEnumerable<string> words) =>
+        _words = new HashSet<string>(words, StringComparer.OrdinalIgnoreCase);
+
+    public bool IsDictionaryWord(string word)
+    {
+        if (_words.Contains(word))
+        {
+            return true;
+        }
+
+        // "Rechnnung" is a typo for "Rechnung", not a surname.
+        return _words.Any(known => Math.Abs(known.Length - word.Length) <= 2 && Distance(known, word) <= 2);
+    }
+
+    private static int Distance(string a, string b)
+    {
+        var previous = new int[b.Length + 1];
+        var current = new int[b.Length + 1];
+
+        for (var j = 0; j <= b.Length; j++)
+        {
+            previous[j] = j;
+        }
+
+        for (var i = 1; i <= a.Length; i++)
+        {
+            current[0] = i;
+
+            for (var j = 1; j <= b.Length; j++)
+            {
+                var cost = char.ToLowerInvariant(a[i - 1]) == char.ToLowerInvariant(b[j - 1]) ? 0 : 1;
+                current[j] = Math.Min(Math.Min(current[j - 1] + 1, previous[j] + 1), previous[j - 1] + cost);
+            }
+
+            (previous, current) = (current, previous);
+        }
+
+        return previous[b.Length];
     }
 }

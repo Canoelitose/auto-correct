@@ -60,6 +60,7 @@ Vor dem Senden werden ersetzt:
 |---|---|---|
 | Vorname + Nachname | bekannter Vorname aus einer Liste | `Alex Muster` |
 | Name nach Anrede | `Herr`, `Frau`, `Dr.`, `Prof.`, `Mr`, `Mrs` … | `Alex Muster` |
+| **Jedes grossgeschriebene Wort, das kein Wort ist** | Windows-Wörterbuch kennt es nicht | `Muster` |
 | Eigene Begriffe | deine Liste in den Einstellungen | `Muster` |
 | E-Mail-Adresse | `…@….…` | `kontakt1@example.com` |
 | Telefonnummer | 7+ Ziffern mit Trennzeichen | `+41 00 000 00 01` |
@@ -75,25 +76,41 @@ Fall und Bezüge bleiben heil, und das Zurücksetzen ist eine simple Ersetzung.
 
 ---
 
-## Die Grenzen, ehrlich
+## Wie „jeder Name" erkannt wird – und wo die Grenze bleibt
 
-Das ist Mustererkennung, kein Verständnis. Konkret:
+Die wichtigste Regel ist die dritte in der Tabelle oben, und sie braucht eine Erklärung.
 
-- **Ein unbekannter Nachname ohne Anrede rutscht durch.** „Ich habe mit Brunnenwieser
-  gesprochen" bleibt so, wie es dasteht. Genau dafür gibt es das Feld *Immer ersetzen* – trag
-  dort ein, was ein Dienst nie sehen soll.
-- **Adressen, Geburtsdaten und Ortsnamen werden nicht erkannt.** Nur die Muster aus der Tabelle
-  oben.
+Im Deutschen wird **jedes** Substantiv grossgeschrieben. „Grossgeschrieben" heisst also gar
+nichts. Die brauchbare Frage ist eine andere: *ist das überhaupt ein Wort?* Genau das weiss die
+Rechtschreibprüfung, die in Windows steckt. `Rechnung` steht im Wörterbuch, `Brunnenwieser`
+nicht – und ein grossgeschriebenes Wort, das in keinem Wörterbuch steht, ist praktisch immer
+ein Name. Damit werden auch Nachnamen erkannt, die auf keiner Liste stehen können.
+
+Ein Tippfehler wird davon unterschieden: für `Rechnnung` schlägt das Wörterbuch `Rechnung` vor,
+also ist es ein Wort mit Fehler und kein Name. Ohne diese Unterscheidung würde ein Tippfehler
+maskiert – und käme unkorrigiert zurück, weil das Modell ihn nie gesehen hätte.
+
+**Was trotzdem durchrutscht:**
+
+- **Ein Nachname, der zufällig ein normales Wort ist.** *Herr Koch*, *Frau Berg*, *Mr Baker* –
+  das steht im Wörterbuch. Mit Anrede davor wird es erkannt, allein stehend nicht. Dafür gibt es
+  das Feld *Immer ersetzen*.
+- **Adressen, Geburtsdaten und Ortsnamen** werden nicht als solche erkannt. Ein ungewöhnlicher
+  Ortsname fällt zwar oft unter die Wörterbuch-Regel, aber das ist Zufall, kein Versprechen.
 - **Der übrige Satz geht unverändert hinaus.** Wer im Text steht, ist maskiert; *worum* es geht,
   nicht.
 - **Ändert das Modell den Platzhalter, geht der Name verloren.** Formuliert es `Alex Muster` zu
   `Herr Muster` um, kommt beim Zurücksetzen nur der Nachname zurück. Bei Umformulierungen also
-  das Ergebnis kurz anschauen, bevor du `Enter` drückst.
+  das Ergebnis kurz anschauen, bevor du es übernimmst.
+- **Ohne Wörterbuch fällt die Regel weg.** Hat Windows für keine der Sprachen eine
+  Rechtschreibprüfung installiert, bleiben nur Vornamensliste, Anrede und deine eigene Liste.
 - **Das ist keine Anonymisierung im rechtlichen Sinn.** Für Daten mit Schutzbedarf gilt: lokales
   Modell, oder gar nicht.
 
-Wer das nicht will, stellt *Namen vor dem Senden ersetzen* auf **Immer** und trägt seine
-festen Begriffe ein – oder bleibt bei Ollama, wo die Frage sich gar nicht stellt.
+Eine Garantie, dass *wirklich jeder* Name erkannt wird, kann dir niemand geben, der den Text
+nicht versteht – und verstehen würde ihn nur ein Modell, an das man den Text dafür erst schicken
+müsste. Was du sicher kontrollierst, sind die beiden Regler: *Immer ersetzen* für deine festen
+Begriffe, und ein lokales Modell für alles, was gar nicht hinaus soll.
 
 ---
 

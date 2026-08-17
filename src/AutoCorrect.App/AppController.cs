@@ -37,6 +37,7 @@ public sealed class AppController : IDisposable
     private AppSettings _settings;
     private ContextMenu? _trayMenu;
     private MenuItem? _autoStartMenuItem;
+    private MainWindow? _mainWindow;
     private SettingsWindow? _settingsWindow;
     private AboutWindow? _aboutWindow;
     private bool _busy;
@@ -62,7 +63,7 @@ public sealed class AppController : IDisposable
         _hotkeys = new HotkeyManager(_messageWindow);
 
         _tray = new TrayIcon(_messageWindow, $"{UiText.AppName} – {_settings.PrimaryHotkey}");
-        _tray.Activated += (_, _) => ShowSettings();
+        _tray.Activated += (_, _) => ShowMainWindow();
         _tray.MenuRequested += (_, _) => ShowTrayMenu();
 
         UiText.Language = UiText.Resolve(_settings.InterfaceLanguage);
@@ -327,7 +328,11 @@ public sealed class AppController : IDisposable
     {
         var menu = new ContextMenu();
 
-        var settingsItem = new MenuItem { Header = UiText.TraySettings, FontWeight = FontWeights.SemiBold };
+        var openItem = new MenuItem { Header = UiText.TrayOpenWindow, FontWeight = FontWeights.SemiBold };
+        openItem.Click += (_, _) => ShowMainWindow();
+        menu.Items.Add(openItem);
+
+        var settingsItem = new MenuItem { Header = UiText.TraySettings };
         settingsItem.Click += (_, _) => ShowSettings();
         menu.Items.Add(settingsItem);
 
@@ -409,6 +414,21 @@ public sealed class AppController : IDisposable
 
     // ---------------------------------------------------------------- windows
 
+    /// <summary>
+    /// Opens the window for working on text directly. Built on first use: a tray application
+    /// that constructs a window nobody asks for would pay for it in memory at every start.
+    /// </summary>
+    private void ShowMainWindow()
+    {
+        if (_mainWindow is null)
+        {
+            _mainWindow = new MainWindow(_engine, DescribeLastEngine, ShowSettings, ShowAbout);
+            _mainWindow.UpdateHotkeyHint(_settings.PrimaryHotkey);
+        }
+
+        _mainWindow.ShowAndFocus();
+    }
+
     private void ShowSettings()
     {
         if (_settingsWindow is not null)
@@ -448,10 +468,17 @@ public sealed class AppController : IDisposable
                 AutoStartManager.SetEnabled(updated.StartWithWindows);
                 RegisterHotkeys(reportConflicts: true);
 
+                _mainWindow?.UpdateHotkeyHint(updated.PrimaryHotkey);
+
                 if (languageChanged)
                 {
                     // The popup is built once and reused, so it is rebuilt in the new language.
                     ReplacePopup();
+                    _mainWindow?.ApplyTexts();
+
+                    // The tray menu carries translated captions as well.
+                    _trayMenu = null;
+                    _autoStartMenuItem = null;
                 }
             }
         }
@@ -518,6 +545,12 @@ public sealed class AppController : IDisposable
 
         _popup.EndSession();
         _popup.Close();
+
+        // The window refuses an ordinary Close so the tray application survives it; on exit it
+        // has to go for real, otherwise WPF keeps the process alive.
+        _mainWindow?.CloseForReal();
+        _mainWindow = null;
+
         _tray.Dispose();
         _hotkeys.Dispose();
         _messageWindow.Dispose();

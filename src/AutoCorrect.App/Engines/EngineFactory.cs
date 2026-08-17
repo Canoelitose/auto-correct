@@ -33,7 +33,7 @@ internal static class EngineFactory
         // before producing anything, so a running LanguageTool always answers on its own.
         return new EngineRouter(
             new LanguageToolEngine(http, settings),
-            new LlmEngine(http, settings, cache),
+            new LlmEngine(http, settings, cache, new WindowsWordKnowledge(settings)),
             new WindowsSpellCheckEngine(settings));
     }
 

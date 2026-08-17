@@ -39,6 +39,7 @@ public sealed class LlmEngine : ITextEngine
     private readonly HttpClient _http;
     private readonly Func<AppSettings> _settingsProvider;
     private readonly ResultCache? _cache;
+    private readonly IWordKnowledge? _knowledge;
 
     private DateTimeOffset _unavailableUntil = DateTimeOffset.MinValue;
 
@@ -57,11 +58,20 @@ public sealed class LlmEngine : ITextEngine
     private int _lastMaskedCount;
 
     /// <param name="cache">Optional. Null disables caching entirely.</param>
-    public LlmEngine(HttpClient http, Func<AppSettings> settingsProvider, ResultCache? cache = null)
+    /// <param name="knowledge">
+    /// Optional dictionary for the name masking. Without it only known first names, salutations
+    /// and the user's own list are recognised; with it, any capitalised word that is not a word.
+    /// </param>
+    public LlmEngine(
+        HttpClient http,
+        Func<AppSettings> settingsProvider,
+        ResultCache? cache = null,
+        IWordKnowledge? knowledge = null)
     {
         _http = http ?? throw new ArgumentNullException(nameof(http));
         _settingsProvider = settingsProvider ?? throw new ArgumentNullException(nameof(settingsProvider));
         _cache = cache;
+        _knowledge = knowledge;
     }
 
     public string Name => UiText.EngineLlmName;
@@ -140,7 +150,9 @@ public sealed class LlmEngine : ITextEngine
 
         // Masked before anything is sent, and only the masked text ever reaches the endpoint.
         var settings = _settingsProvider();
-        var mask = MasksNames(settings) ? PrivacyMask.Create(input, settings.LlmProtectedTerms) : null;
+        var mask = MasksNames(settings)
+            ? PrivacyMask.Create(input, settings.LlmProtectedTerms, _knowledge)
+            : null;
         var sent = mask?.Masked ?? input;
 
         _lastMaskedCount = mask?.ReplacementCount ?? 0;

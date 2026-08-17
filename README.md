@@ -94,22 +94,31 @@ Liste ihrer Grenzen: [docs/SETUP-CLOUD.md](docs/SETUP-CLOUD.md)
 dotnet run --project src/AutoCorrect.App
 ```
 
-Die Anwendung hat **kein eigenes Fenster**. Beim ersten Start erscheint ein kurzes
-Begrüssungsfenster, danach läuft sie nur als Symbol im Infobereich der Taskleiste. Windows 11
-versteckt neue Symbole hinter dem Pfeil `^` – von dort auf die Taskleiste ziehen, dann bleibt es
-sichtbar.
+AutoCorrect lässt sich auf zwei Arten benutzen:
+
+- **Per Hotkey in jedem Programm** – Text markieren, `Win + Leertaste`, fertig. Das ist der
+  schnelle Weg und der eigentliche Zweck.
+- **Im eigenen Fenster** – Doppelklick aufs Tray-Symbol öffnet ein Fenster, in das Text
+  eingefügt oder getippt wird. Nützlich für längere Texte, zum Ausprobieren und wenn der Text
+  nirgends sonst markiert ist.
+
+Die Anwendung läuft als Symbol im Infobereich der Taskleiste. Windows 11 versteckt neue Symbole
+hinter dem Pfeil `^` – von dort auf die Taskleiste ziehen, dann bleibt es sichtbar. Das Fenster
+zu schliessen beendet das Programm **nicht**; dafür ist *Beenden* im Rechtsklick-Menü da.
 
 ### 4. Benutzen
 
 | Taste | Wirkung |
 |---|---|
+| Doppelklick aufs Tray-Symbol | Fenster zum direkten Bearbeiten öffnen |
 | `Win + Leertaste` | Popup mit korrigiertem Text an der Cursorposition |
 | `Ctrl + Alt + R` | direkt in den Modus *Umformulieren* |
 | `Enter` | Ergebnis übernehmen und in die Ursprungsanwendung einfügen |
 | `Esc` | abbrechen und schliessen |
 | `Ctrl + C` | Ergebnis nur kopieren |
 
-Rechtsklick auf das Tray-Icon: *Einstellungen*, *Über*, *Mit Windows starten*, *Beenden*.
+Rechtsklick auf das Tray-Icon: *Fenster öffnen*, *Einstellungen*, *Über*, *Mit Windows
+starten*, *Deinstallieren*, *Beenden*.
 
 ---
 
@@ -175,6 +184,7 @@ AutoCorrect.sln
 │   │   ├── LanguageTool/          LanguageToolEngine, DTOs, CorrectionApplier
 │   │   └── Llm/                   LlmEngine (OpenAI-kompatibel, Streaming), Prompts
 │   ├── Caching/ResultCache.cs     SQLite-Zwischenspeicher unter %LOCALAPPDATA%
+│   ├── Privacy/                   PrivacyMask, MaskRestorer: Namen vor dem Senden ersetzen
 │   ├── Configuration/             AppSettings, SettingsStore, HotkeyDefinition, VirtualKeys
 │   ├── Diagnostics/               FileLogger (rotierend), Log
 │   └── Localization/UiText.cs     alle deutschen Texte an einer Stelle
@@ -187,7 +197,7 @@ AutoCorrect.sln
 │   ├── Hotkeys/HotkeyManager.cs   RegisterHotKey inklusive Konfliktmeldung
 │   ├── Capture/                   UI Automation, Clipboard-Fallback, Einfügen
 │   ├── Tray/                      Shell_NotifyIcon-Tray ohne WinForms-Abhängigkeit
-│   ├── Ui/                        PopupWindow, SettingsWindow, AboutWindow, ScreenPlacement
+│   ├── Ui/                        MainWindow, PopupWindow, SettingsWindow, AboutWindow
 │   └── Startup/AutoStartManager   Registry-Eintrag HKCU\...\Run
 │
 ├── tests/AutoCorrect.Core.Tests/  Logik-Tests, ohne NuGet, laufen überall
