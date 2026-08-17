@@ -46,6 +46,9 @@ public partial class SettingsWindow : Window
         EndpointBox.Text = UpdatedSettings.LanguageToolEndpoint;
         LlmEndpointBox.Text = UpdatedSettings.LlmEndpoint;
         LlmModelBox.Text = UpdatedSettings.LlmModel;
+        LlmApiKeyBox.Password = UpdatedSettings.LlmApiKey;
+        ProtectedTermsBox.Text = string.Join(Environment.NewLine, UpdatedSettings.LlmProtectedTerms);
+        FillMaskBox();
         AutoStartCheck.IsChecked = UpdatedSettings.StartWithWindows;
         UiAutomationCheck.IsChecked = UpdatedSettings.PreferUiAutomation;
 
@@ -98,6 +101,13 @@ public partial class SettingsWindow : Window
         LlmEndpointHint.Text = UiText.SettingsLlmEndpointHint;
         LlmModelLabel.Text = UiText.SettingsLlmModel;
         LlmModelHint.Text = UiText.SettingsLlmModelHint;
+        LlmApiKeyLabel.Text = UiText.SettingsLlmApiKey;
+        LlmApiKeyHint.Text = UiText.SettingsLlmApiKeyHint;
+        MaskNamesLabel.Text = UiText.SettingsMaskNames;
+        MaskNamesHint.Text = UiText.SettingsMaskHint;
+        ProtectedTermsLabel.Text = UiText.SettingsProtectedTerms;
+        ProtectedTermsHint.Text = UiText.SettingsProtectedTermsHint;
+        FillMaskBox();
         ClearCacheButton.Content = UiText.SettingsClearCache;
         CacheHint.Text = UiText.SettingsCacheHint(_cache?.Count() ?? 0);
         AutoStartCheck.Content = UiText.TrayStartWithWindows;
@@ -294,6 +304,11 @@ public partial class SettingsWindow : Window
         UpdatedSettings.LanguageToolEndpoint = endpoint;
         UpdatedSettings.LlmEndpoint = llmEndpoint;
         UpdatedSettings.LlmModel = LlmModelBox.Text.Trim();
+        UpdatedSettings.LlmApiKey = LlmApiKeyBox.Password.Trim();
+        UpdatedSettings.LlmMaskNames = SelectedMaskSetting();
+        UpdatedSettings.LlmProtectedTerms = ProtectedTermsBox.Text
+            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToList();
         UpdatedSettings.StartWithWindows = AutoStartCheck.IsChecked == true;
         UpdatedSettings.PreferUiAutomation = UiAutomationCheck.IsChecked == true;
 
@@ -311,6 +326,35 @@ public partial class SettingsWindow : Window
 
         DialogResult = true;
     }
+
+    /// <summary>
+    /// The three masking choices, with their setting value carried alongside the label so the
+    /// interface language can change without losing the selection.
+    /// </summary>
+    private sealed record MaskOption(string Value, string Label)
+    {
+        public override string ToString() => Label;
+    }
+
+    private void FillMaskBox()
+    {
+        var current = SelectedMaskSetting();
+
+        var options = new[]
+        {
+            new MaskOption(AppSettings.MaskNamesAuto, UiText.SettingsMaskAuto),
+            new MaskOption(AppSettings.MaskNamesAlways, UiText.SettingsMaskAlways),
+            new MaskOption(AppSettings.MaskNamesNever, UiText.SettingsMaskNever),
+        };
+
+        MaskNamesBox.ItemsSource = options;
+        MaskNamesBox.SelectedItem =
+            options.FirstOrDefault(o => string.Equals(o.Value, current, StringComparison.OrdinalIgnoreCase))
+            ?? options[0];
+    }
+
+    private string SelectedMaskSetting() =>
+        MaskNamesBox.SelectedItem is MaskOption option ? option.Value : UpdatedSettings.LlmMaskNames;
 
     private static bool IsHttpAddress(string value) =>
         Uri.TryCreate(value, UriKind.Absolute, out var uri) &&

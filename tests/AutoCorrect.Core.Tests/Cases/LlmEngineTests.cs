@@ -3,6 +3,7 @@ using AutoCorrect.Core.Caching;
 using AutoCorrect.Core.Configuration;
 using AutoCorrect.Core.Engines;
 using AutoCorrect.Core.Engines.Llm;
+using AutoCorrect.Core.Privacy;
 
 namespace AutoCorrect.Core.Tests.Cases;
 
@@ -148,6 +149,164 @@ public static class LlmEngineTests
             Assert.Contains("ollama pull qwen2.5:3b", ex.Message);
             // The request must not even be attempted when nothing can answer it.
             Assert.Equal(0, server.ChatRequestCount);
+        });
+
+        // ------------------------------------------------------------ authentication
+
+        runner.Add("LLM: no API key means no Authorization header at all", async () =>
+        {
+            using var server = FakeLlmServer.Streaming("ok");
+            var settings = new AppSettings { LlmEndpoint = server.Endpoint };
+            using var http = new HttpClient();
+            var engine = new LlmEngine(http, () => settings);
+
+            await DrainAsync(engine, "Test", ProcessingMode.Rephrase);
+
+            // Ollama on the same machine wants none, and an empty header is a 401 waiting to
+            // happen on a server that validates the header whenever it is present.
+            Assert.Equal(null, server.LastAuthorization);
+        });
+
+        runner.Add("LLM: a configured API key is sent as a bearer token", async () =>
+        {
+            using var server = FakeLlmServer.Streaming("ok");
+            server.RequiredKey = "nvapi-geheim";
+
+            var settings = new AppSettings
+            {
+                LlmEndpoint = server.Endpoint,
+                LlmApiKey = "nvapi-geheim",
+            };
+
+            using var http = new HttpClient();
+            var engine = new LlmEngine(http, () => settings);
+
+            await DrainAsync(engine, "Test", ProcessingMode.Rephrase);
+            Assert.Equal("Bearer nvapi-geheim", server.LastAuthorization);
+        });
+
+        runner.Add("LLM: a rejected key is reported as a refused login, not a missing model", async () =>
+        {
+            using var server = FakeLlmServer.Streaming("ok");
+            server.RequiredKey = "richtig";
+
+            var settings = new AppSettings { LlmEndpoint = server.Endpoint, LlmApiKey = "falsch" };
+            using var http = new HttpClient();
+            var engine = new LlmEngine(http, () => settings);
+
+            var ex = await Assert.ThrowsAsync<EngineUnavailableException>(
+                () => DrainAsync(engine, "Test", ProcessingMode.Rephrase));
+
+            Assert.Contains("abgelehnt", ex.Message);
+            // Telling the user to pull a model would send them down entirely the wrong path.
+            Assert.False(ex.Message.Contains("ollama pull", StringComparison.Ordinal), ex.Message);
+        });
+
+        runner.Add("LLM: the key never appears in a message shown to the user", async () =>
+        {
+            using var server = FakeLlmServer.Streaming("ok");
+            server.RequiredKey = "richtig";
+
+            const string secret = "nvapi-streng-geheim-12345";
+            var settings = new AppSettings { LlmEndpoint = server.Endpoint, LlmApiKey = secret };
+            using var http = new HttpClient();
+            var engine = new LlmEngine(http, () => settings);
+
+            var ex = await Assert.ThrowsAsync<EngineUnavailableException>(
+                () => DrainAsync(engine, "Test", ProcessingMode.Rephrase));
+
+            Assert.False(ex.Message.Contains(secret, StringComparison.Ordinal), "the key leaked into the message");
+        });
+
+        // ------------------------------------------------------------ masking
+
+        runner.Add("LLM: a hosted endpoint never receives the real names", async () =>
+        {
+            // The whole point of the masking: what goes over the wire must not contain them.
+            const string input = "Anna Meier kommt am Montag.";
+
+            // The model answers with the text it was given, so the round trip has to reproduce
+            // the original exactly - stand-ins in, real names out.
+            using var server = FakeLlmServer.Streaming(PrivacyMask.Create(input).Masked);
+
+            var settings = new AppSettings
+            {
+                // The fake server is on 127.0.0.1, so "always" stands in for a hosted endpoint.
+                LlmEndpoint = server.Endpoint,
+                LlmMaskNames = AppSettings.MaskNamesAlways,
+            };
+
+            using var http = new HttpClient();
+            var engine = new LlmEngine(http, () => settings);
+
+            var answer = string.Concat(await CollectChunksAsync(engine, input, ProcessingMode.Rephrase));
+
+            var sent = server.LastRequestBody!;
+            Assert.False(sent.Contains("Anna", StringComparison.Ordinal), $"the name was sent: {sent}");
+            Assert.False(sent.Contains("Meier", StringComparison.Ordinal), $"the name was sent: {sent}");
+
+            Assert.Equal(input, answer);
+        });
+
+        runner.Add("LLM: a local endpoint is not masked", async () =>
+        {
+            using var server = FakeLlmServer.Streaming("ok");
+            var settings = new AppSettings { LlmEndpoint = server.Endpoint };
+
+            using var http = new HttpClient();
+            var engine = new LlmEngine(http, () => settings);
+
+            await DrainAsync(engine, "Anna Meier kommt am Montag.", ProcessingMode.Rephrase);
+
+            // 127.0.0.1 is this machine: the model sees the text either way, and masking would
+            // only cost accuracy.
+            Assert.Contains("Anna Meier", server.LastRequestBody!);
+        });
+
+        runner.Add("LLM: masked words the user listed never leave either", async () =>
+        {
+            using var server = FakeLlmServer.Streaming("Das Projekt Muster steht.");
+
+            var settings = new AppSettings
+            {
+                LlmEndpoint = server.Endpoint,
+                LlmMaskNames = AppSettings.MaskNamesAlways,
+                LlmProtectedTerms = ["Zwiebelturm"],
+            };
+
+            using var http = new HttpClient();
+            var engine = new LlmEngine(http, () => settings);
+
+            await DrainAsync(engine, "Das Projekt Zwiebelturm steht.", ProcessingMode.Rephrase);
+
+            Assert.False(
+                server.LastRequestBody!.Contains("Zwiebelturm", StringComparison.Ordinal),
+                server.LastRequestBody!);
+        });
+
+        runner.Add("LLM: the cache is keyed on the real text, not the masked one", async () =>
+        {
+            const string input = "Anna Meier kommt.";
+
+            using var server = FakeLlmServer.Streaming(PrivacyMask.Create(input).Masked);
+            using var temp = new TempCacheFile();
+            using var cache = new ResultCache(temp.Path);
+
+            var settings = new AppSettings
+            {
+                LlmEndpoint = server.Endpoint,
+                LlmMaskNames = AppSettings.MaskNamesAlways,
+            };
+
+            using var http = new HttpClient();
+            var engine = new LlmEngine(http, () => settings, cache);
+            var first = string.Concat(await CollectChunksAsync(engine, input, ProcessingMode.Rephrase));
+            var second = string.Concat(await CollectChunksAsync(engine, input, ProcessingMode.Rephrase));
+
+            Assert.Equal(1, server.ChatRequestCount);
+            Assert.Equal(first, second);
+            // The cached answer has to be the restored one, not the one with the stand-ins.
+            Assert.Contains("Anna Meier", second);
         });
 
         // ------------------------------------------------------------ choosing a model

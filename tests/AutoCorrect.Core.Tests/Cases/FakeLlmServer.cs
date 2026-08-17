@@ -48,6 +48,12 @@ internal sealed class FakeLlmServer : IDisposable
 
     public int ModelListRequestCount { get; private set; }
 
+    /// <summary>Authorization header of the last chat request, null when none was sent.</summary>
+    public string? LastAuthorization { get; private set; }
+
+    /// <summary>When set, requests without exactly this bearer token are answered with 401.</summary>
+    public string? RequiredKey { get; set; }
+
     /// <summary>Blocks the response until the test releases it, to exercise timeouts.</summary>
     public ManualResetEventSlim? HoldResponse { get; set; }
 
@@ -112,7 +118,14 @@ internal sealed class FakeLlmServer : IDisposable
             LastRequestBody = await reader.ReadToEndAsync();
         }
 
+        LastAuthorization = context.Request.Headers["Authorization"];
         ChatRequestCount++;
+
+        if (RequiredKey is not null && LastAuthorization != $"Bearer {RequiredKey}")
+        {
+            await WriteJsonAsync(context, 401, "{\"error\":\"unauthorized\"}");
+            return;
+        }
         var reply = _chatHandler(LastRequestBody);
 
         if (reply.Status != 200)

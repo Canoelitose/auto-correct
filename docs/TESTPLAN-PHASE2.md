@@ -82,13 +82,31 @@ Anführungszeichen. Nichts davon darf im Dokument landen.
 | 4.7 | Sehr langen Text (mehrere Absätze) umformulieren | vollständige Antwort, kein Abbruch nach zwei Minuten |
 | 4.8 | Während der Verarbeitung den Modus wechseln | laufende Anfrage bricht ab, neue startet |
 
+## 4b Namensmaskierung (nur bei gehostetem Dienst)
+
+Der Teil, bei dem ein Fehler echten Schaden anrichtet: was hinausgeht, muss stimmen.
+
+| # | Schritt | Erwartet |
+|---|---|---|
+| 4b.1 | Adresse auf einen gehosteten Dienst stellen, `Anna Meier kommt am Montag.` umformulieren | Statuszeile zeigt `… · Namen ersetzt` |
+| 4b.2 | Netzwerkmitschnitt derselben Anfrage ansehen | im gesendeten Text steht **weder** `Anna` **noch** `Meier` |
+| 4b.3 | Ergebnis im Popup | die echten Namen stehen wieder drin, nie ein Platzhalter |
+| 4b.4 | `Sehr geehrter Herr Brunnenwieser` umformulieren | Nachname wird ersetzt, obwohl er in keiner Liste steht |
+| 4b.5 | Text mit E-Mail, Telefonnummer und IBAN senden | alle drei im Mitschnitt ersetzt |
+| 4b.6 | `Im Jahr 2024 kostete es 1500 Franken.` senden | unverändert – Jahreszahlen und Preise sind keine Telefonnummern |
+| 4b.7 | Eigenen Begriff unter *Immer ersetzen* eintragen, im Text verwenden | im Mitschnitt ersetzt |
+| 4b.8 | *Namen ersetzen* auf *Nie*, gleicher Text | Statuszeile ohne den Zusatz, Namen gehen hinaus |
+| 4b.9 | Adresse zurück auf `localhost`, *Automatisch* | keine Maskierung, Namen bleiben im Prompt |
+| 4b.10 | Falschen API-Schlüssel eintragen | Meldung „Zugang abgelehnt", **nicht** „Modell nicht installiert" |
+| 4b.11 | Protokoll nach allen Versuchen durchsuchen | weder der API-Schlüssel noch ein Klartextname darin |
+
 ## 5 Ressourcen und Datenschutz
 
 | # | Schritt | Erwartet |
 |---|---|---|
 | 5.1 | Task-Manager, AutoCorrect im Leerlauf nach mehreren Umformulierungen | weiterhin im Bereich 40–70 MB |
 | 5.2 | `%LOCALAPPDATA%\AutoCorrect\logs\autocorrect.log` ansehen | **kein** verarbeiteter Text, höchstens `<52 chars>` |
-| 5.3 | Netzwerkmitschnitt während einer Umformulierung | nur Verkehr zu `localhost:11434`, nichts nach aussen |
+| 5.3 | Netzwerkmitschnitt während einer Umformulierung (Standardeinstellungen) | nur Verkehr zu `localhost:11434`, nichts nach aussen |
 | 5.4 | `%LOCALAPPDATA%\AutoCorrect\cache.db` | vorhanden; enthält bewusst Klartext, deshalb *lokal* und nicht im Roaming-Profil |
 | 5.5 | `%APPDATA%\AutoCorrect` | enthält **keine** Textinhalte, nur `settings.json` |
 

@@ -131,6 +131,52 @@ public static class SettingsStoreTests
             clone.PrimaryHotkey = "Ctrl+Alt+R";
             Assert.Equal("Win+Space", original.PrimaryHotkey);
         });
+
+        runner.Add("Settings: the protected words of a clone are a copy, not the same list", () =>
+        {
+            // The settings dialog works on a clone. A shared list would let a cancelled dialog
+            // change what the running application protects.
+            var original = new AppSettings { LlmProtectedTerms = ["Zwiebelturm"] };
+            var clone = original.Clone();
+
+            clone.LlmProtectedTerms.Add("Nordwind");
+
+            Assert.Equal(1, original.LlmProtectedTerms.Count);
+            Assert.Equal(2, clone.LlmProtectedTerms.Count);
+        });
+
+        runner.Add("Settings: the model and privacy settings survive a round trip", () =>
+        {
+            using var temp = new TempDirectory();
+            var path = Path.Combine(temp.Path, "settings.json");
+
+            new SettingsStore(path).Save(new AppSettings
+            {
+                LlmEndpoint = "https://integrate.api.nvidia.com/v1",
+                LlmModel = "meta/llama-3.1-8b-instruct",
+                LlmApiKey = "nvapi-abc",
+                LlmMaskNames = AppSettings.MaskNamesAlways,
+                LlmProtectedTerms = ["Zwiebelturm", "Nordwind"],
+            });
+
+            var read = new SettingsStore(path).Load();
+
+            Assert.Equal("https://integrate.api.nvidia.com/v1", read.LlmEndpoint);
+            Assert.Equal("meta/llama-3.1-8b-instruct", read.LlmModel);
+            Assert.Equal("nvapi-abc", read.LlmApiKey);
+            Assert.Equal(AppSettings.MaskNamesAlways, read.LlmMaskNames);
+            Assert.Equal(2, read.LlmProtectedTerms.Count);
+            Assert.Contains("Zwiebelturm", string.Join(",", read.LlmProtectedTerms));
+        });
+
+        runner.Add("Settings: blank and duplicate protected words are dropped", () =>
+        {
+            var settings = new AppSettings { LlmProtectedTerms = ["  Nordwind ", "", "   ", "nordwind"] };
+            settings.Normalize();
+
+            Assert.Equal(1, settings.LlmProtectedTerms.Count);
+            Assert.Equal("Nordwind", settings.LlmProtectedTerms[0]);
+        });
     }
 }
 

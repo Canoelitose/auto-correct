@@ -10,6 +10,7 @@ LanguageToolEngineTests.Register(runner);
 EngineRouterTests.Register(runner);
 LlmEngineTests.Register(runner);
 ModelCatalogueTests.Register(runner);
+PrivacyMaskTests.Register(runner);
 ResponseFilterTests.Register(runner);
 ResultCacheTests.Register(runner);
 LoggingTests.Register(runner);

@@ -2,7 +2,13 @@
 
 Lokales Textkorrektur-Tool für Windows. Markierten Text in **jeder** Anwendung per Hotkey
 abgreifen, korrigieren lassen und zurückschreiben. Die Verarbeitung läuft vollständig lokal
-bzw. im lokalen Netz – es gehen keine Daten an externe Dienste.
+bzw. im lokalen Netz – ab Werk gehen keine Daten an externe Dienste.
+
+Wer trotzdem einen gehosteten Dienst nutzen will (stärkere Modelle, kein Download), kann die
+Adresse umstellen. Dann ersetzt AutoCorrect vorher Namen, E-Mail-Adressen, Telefonnummern und
+IBAN durch Platzhalter und setzt sie im Ergebnis wieder ein:
+[docs/SETUP-CLOUD.md](docs/SETUP-CLOUD.md) – inklusive dessen, was diese Maskierung **nicht**
+kann.
 
 **Deutsch und Englisch in einer Exe** – Oberfläche umschaltbar, Textsprache wird automatisch
 erkannt.
@@ -78,6 +84,9 @@ ollama pull qwen2.5:3b
 
 Der Name muss nicht stimmen: ist ein anderes Modell installiert, wird es automatisch benutzt.
 Mehr dazu, inklusive Modellvergleich und llama.cpp: [docs/SETUP-OLLAMA.md](docs/SETUP-OLLAMA.md)
+
+Statt lokal geht auch ein gehosteter Dienst – mit Maskierung der Namen und einer ehrlichen
+Liste ihrer Grenzen: [docs/SETUP-CLOUD.md](docs/SETUP-CLOUD.md)
 
 ### 3. AutoCorrect bauen und starten
 
@@ -272,6 +281,11 @@ Weitere bewusste Entscheidungen sind in [docs/BUILD.md](docs/BUILD.md#entscheidu
   schluckt sie, der Layout-Wechsel entfällt dadurch. Wer ihn braucht, stellt in den
   Einstellungen z. B. auf `Ctrl+Alt+Leertaste` um.
 - Der verarbeitete Text wird **nie** ins Protokoll geschrieben, nur seine Länge. Der
+  API-Schlüssel ebenso wenig.
+- **Die Namensmaskierung ist Mustererkennung, kein Verständnis.** Ein unbekannter Nachname ohne
+  Anrede kann durchrutschen, Adressen und Geburtsdaten werden gar nicht erkannt, und der
+  restliche Satz geht unverändert hinaus. Details in
+  [docs/SETUP-CLOUD.md](docs/SETUP-CLOUD.md). Der
   Zwischenspeicher unter `%LOCALAPPDATA%\AutoCorrect\cache.db` enthält dagegen naturgemäss
   Klartext; er lässt sich in den Einstellungen jederzeit leeren.
 - **Erste Umformulierung nach dem Start:** das Modell muss geladen werden, das dauert je nach
@@ -295,6 +309,9 @@ Weitere bewusste Entscheidungen sind in [docs/BUILD.md](docs/BUILD.md#entscheidu
   "interfaceLanguage": "auto",
   "llmEndpoint": "http://localhost:11434/v1",
   "llmModel": "qwen2.5:3b",
+  "llmApiKey": "",
+  "llmMaskNames": "auto",
+  "llmProtectedTerms": [],
   "logLevel": "Warning",
   "maxInputLength": 5000,
   "clipboardWaitMilliseconds": 100,

@@ -74,6 +74,23 @@
                 <TextBox x:Name="LlmModelBox" Padding="6,5" />
                 <TextBlock x:Name="LlmModelHint" Style="{StaticResource Hint}" />
 
+                <TextBlock x:Name="LlmApiKeyLabel" Style="{StaticResource FieldLabel}" />
+                <PasswordBox x:Name="LlmApiKeyBox" Padding="6,5" />
+                <TextBlock x:Name="LlmApiKeyHint" Style="{StaticResource Hint}" />
+
+                <TextBlock x:Name="MaskNamesLabel" Style="{StaticResource FieldLabel}" />
+                <ComboBox x:Name="MaskNamesBox" Padding="6,5" />
+                <TextBlock x:Name="MaskNamesHint" Style="{StaticResource Hint}" />
+
+                <TextBlock x:Name="ProtectedTermsLabel" Style="{StaticResource FieldLabel}" />
+                <TextBox x:Name="ProtectedTermsBox"
+                         Height="70"
+                         Padding="6,5"
+                         AcceptsReturn="True"
+                         TextWrapping="NoWrap"
+                         VerticalScrollBarVisibility="Auto" />
+                <TextBlock x:Name="ProtectedTermsHint" Style="{StaticResource Hint}" />
+
                 <Button x:Name="ClearCacheButton"
                         Margin="0,12,0,0"
                         Padding="10,5"

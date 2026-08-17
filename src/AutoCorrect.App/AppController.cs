@@ -179,9 +179,26 @@ public sealed class AppController : IDisposable
 
     private PopupWindow CreatePopup()
     {
-        var popup = new PopupWindow(_engine, _injector, () => _engine.LastUsedName ?? _engine.Name);
+        var popup = new PopupWindow(_engine, _injector, DescribeLastEngine);
         popup.Warmup();
         return popup;
+    }
+
+    /// <summary>
+    /// What the status line says about who answered. When details were replaced before the text
+    /// was sent, that is said out loud: a privacy promise the user cannot see is worth little.
+    /// </summary>
+    private string DescribeLastEngine()
+    {
+        var name = _engine.LastUsedName ?? _engine.Name;
+
+        var llm = _engine.Engines.OfType<Core.Engines.Llm.LlmEngine>().FirstOrDefault();
+        if (llm is null || llm.LastMaskedCount == 0 || !string.Equals(name, llm.Name, StringComparison.Ordinal))
+        {
+            return name;
+        }
+
+        return $"{name} · {UiText.EngineNamesMasked}";
     }
 
     // ---------------------------------------------------------------- hotkeys

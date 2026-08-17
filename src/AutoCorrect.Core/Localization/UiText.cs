@@ -238,6 +238,17 @@ public static class UiText
     /// <summary>Shown in the status line next to "Windows" and "LanguageTool".</summary>
     public static string EngineLlmName => T("Sprachmodell", "Language model");
 
+    public static string LlmNotAuthorised => T(
+        "Der Endpunkt hat den Zugang abgelehnt.\n\n" +
+        "Bei einem Dienst, der einen Schlüssel verlangt: API-Schlüssel in den Einstellungen " +
+        "prüfen. Ollama auf dem eigenen Rechner braucht keinen.",
+        "The endpoint refused access.\n\n" +
+        "For a service that requires a key: check the API key in the settings. Ollama on your " +
+        "own machine needs none.");
+
+    /// <summary>Shown in the popup status line when details were replaced before sending.</summary>
+    public static string EngineNamesMasked => T("Namen ersetzt", "names replaced");
+
     public static string ModeNotSupported => T(
         "Für diesen Modus ist keine Engine verfügbar.",
         "No engine is available for this mode.");
@@ -297,6 +308,42 @@ public static class UiText
         "nicht da, wird ein anderes installiertes automatisch benutzt.",
         "Recommended: qwen2.5:3b (fetch it once with: ollama pull qwen2.5:3b). If that model is " +
         "missing, another installed one is used automatically.");
+
+    public static string SettingsLlmApiKey => T("API-Schlüssel (optional)", "API key (optional)");
+
+    public static string SettingsLlmApiKeyHint => T(
+        "Leer lassen für Ollama auf diesem Rechner. Nötig nur für Endpunkte, die einen Schlüssel " +
+        "verlangen. Achtung: ein Dienst im Internet bekommt den markierten Text zu sehen.",
+        "Leave empty for Ollama on this machine. Only needed for endpoints that require a key. " +
+        "Note: a service on the internet gets to see the selected text.");
+
+    public static string SettingsMaskNames => T("Namen vor dem Senden ersetzen", "Replace names before sending");
+
+    public static string SettingsMaskAuto => T(
+        "Automatisch – nur bei Diensten ausserhalb des eigenen Netzes",
+        "Automatic – only for services outside your own network");
+
+    public static string SettingsMaskAlways => T("Immer", "Always");
+
+    public static string SettingsMaskNever => T("Nie", "Never");
+
+    public static string SettingsMaskHint => T(
+        "Namen, E-Mail-Adressen, Telefonnummern und IBAN werden durch Platzhalter ersetzt und im " +
+        "Ergebnis wieder eingesetzt. Erkannt wird nach Mustern, nicht mit Verstand: ein " +
+        "unbekannter Nachname ohne Anrede kann durchrutschen. Was gar nicht hinausgehen darf, " +
+        "gehört auf ein lokales Modell.",
+        "Names, e-mail addresses, phone numbers and IBANs are replaced by stand-ins and put back " +
+        "into the result. Detection is by pattern, not by understanding: an unknown surname " +
+        "without a salutation can slip through. Anything that must not leave the device belongs " +
+        "on a local model.");
+
+    public static string SettingsProtectedTerms => T(
+        "Immer ersetzen (ein Wort pro Zeile)",
+        "Always replace (one word per line)");
+
+    public static string SettingsProtectedTermsHint => T(
+        "Eigener Name, Firma, Projektnamen, Kundennamen – alles, was ein Dienst nie sehen soll.",
+        "Your own name, company, project or client names – anything a service should never see.");
 
     public static string SettingsClearCache => T("Zwischenspeicher leeren", "Clear cache");
 

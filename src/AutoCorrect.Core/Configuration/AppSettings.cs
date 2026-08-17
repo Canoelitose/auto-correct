@@ -46,6 +46,32 @@ public sealed class AppSettings
     /// </summary>
     public string LlmModel { get; set; } = LlmEngine.DefaultModel;
 
+    /// <summary>
+    /// Bearer token for endpoints that require one. Ollama on the same machine needs none;
+    /// llama.cpp started with --api-key, LM Studio behind a password and every hosted endpoint
+    /// do. Empty means no Authorization header is sent at all.
+    ///
+    /// Stored in plain text in settings.json, like every other setting - it is protected by the
+    /// file permissions of the user profile and nothing more.
+    /// </summary>
+    public string LlmApiKey { get; set; } = string.Empty;
+
+    /// <summary>
+    /// When names and contact details are replaced before the text is sent:
+    /// "auto" only for an endpoint outside this machine and the local network, "always", "never".
+    ///
+    /// Auto is the default because a model on your own machine sees the text anyway, and masking
+    /// costs a little accuracy - the model works on a sentence about someone else.
+    /// </summary>
+    public string LlmMaskNames { get; set; } = MaskNamesAuto;
+
+    /// <summary>Words that are always replaced, whatever they are: own name, company, project.</summary>
+    public List<string> LlmProtectedTerms { get; set; } = [];
+
+    public const string MaskNamesAuto = "auto";
+    public const string MaskNamesAlways = "always";
+    public const string MaskNamesNever = "never";
+
     public LogLevel LogLevel { get; set; } = LogLevel.Warning;
 
     /// <summary>Selections longer than this are rejected with a hint instead of being processed.</summary>
@@ -109,6 +135,21 @@ public sealed class AppSettings
             LlmModel = LlmEngine.DefaultModel;
         }
 
+        LlmMaskNames = LlmMaskNames?.Trim().ToLowerInvariant() switch
+        {
+            MaskNamesAlways => MaskNamesAlways,
+            MaskNamesNever => MaskNamesNever,
+            _ => MaskNamesAuto,
+        };
+
+        LlmProtectedTerms = LlmProtectedTerms is null
+            ? []
+            : LlmProtectedTerms
+                .Select(t => t?.Trim() ?? string.Empty)
+                .Where(t => t.Length > 0)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
         if (!HotkeyDefinition.TryParse(PrimaryHotkey, out _, out _))
         {
             PrimaryHotkey = HotkeyDefinition.DefaultPrimary.ToString();
@@ -126,6 +167,9 @@ public sealed class AppSettings
         InterfaceLanguage = InterfaceLanguage,
         LlmEndpoint = LlmEndpoint,
         LlmModel = LlmModel,
+        LlmApiKey = LlmApiKey,
+        LlmMaskNames = LlmMaskNames,
+        LlmProtectedTerms = [.. LlmProtectedTerms],
         LogLevel = LogLevel,
         MaxInputLength = MaxInputLength,
         ClipboardWaitMilliseconds = ClipboardWaitMilliseconds,

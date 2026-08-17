@@ -22,7 +22,8 @@ und genau das kann ein Sprachmodell. Die Reihenfolge ist deshalb:
 | Sprachmodell | versteht den Satz, findet auch, was keine Regel abdeckt | wenn Ollama läuft |
 | Windows | nur ob ein Wort existiert | immer, ganz ohne Installation |
 
-Alles läuft auf deinem Rechner, es gehen weiterhin keine Daten an externe Dienste.
+Alles läuft auf deinem Rechner, es gehen keine Daten an externe Dienste. Wer stattdessen einen
+gehosteten Dienst nutzen möchte: [SETUP-CLOUD.md](SETUP-CLOUD.md).
 
 ---
 

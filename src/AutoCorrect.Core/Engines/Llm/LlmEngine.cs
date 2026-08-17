@@ -7,6 +7,7 @@ using AutoCorrect.Core.Caching;
 using AutoCorrect.Core.Configuration;
 using AutoCorrect.Core.Diagnostics;
 using AutoCorrect.Core.Localization;
+using AutoCorrect.Core.Privacy;
 
 namespace AutoCorrect.Core.Engines.Llm;
 
@@ -48,6 +49,13 @@ public sealed class LlmEngine : ITextEngine
     private string? _resolvedFor;
     private string? _resolvedModel;
 
+    /// <summary>
+    /// How many details the last request replaced before sending. Read by the user interface so
+    /// it can say that the text was masked - a promise the user cannot check is worth little.
+    /// Written from the request thread, read from the UI thread; an int assignment is atomic.
+    /// </summary>
+    private int _lastMaskedCount;
+
     /// <param name="cache">Optional. Null disables caching entirely.</param>
     public LlmEngine(HttpClient http, Func<AppSettings> settingsProvider, ResultCache? cache = null)
     {
@@ -57,6 +65,9 @@ public sealed class LlmEngine : ITextEngine
     }
 
     public string Name => UiText.EngineLlmName;
+
+    /// <summary>Details replaced in the most recent request. Zero means nothing was masked.</summary>
+    public int LastMaskedCount => _lastMaskedCount;
 
     /// <summary>
     /// Every mode, correcting included. A spell checker only knows whether a word exists, so
@@ -73,8 +84,11 @@ public sealed class LlmEngine : ITextEngine
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
             timeout.CancelAfter(TimeSpan.FromSeconds(ProbeTimeoutSeconds));
 
-            using var response = await _http.GetAsync(ModelsUrl(_settingsProvider()), timeout.Token)
-                .ConfigureAwait(false);
+            var settings = _settingsProvider();
+            using var probe = new HttpRequestMessage(HttpMethod.Get, ModelsUrl(settings));
+            Authorize(probe, settings);
+
+            using var response = await _http.SendAsync(probe, timeout.Token).ConfigureAwait(false);
 
             if (response.IsSuccessStatusCode)
             {
@@ -117,12 +131,28 @@ public sealed class LlmEngine : ITextEngine
         if (!string.IsNullOrEmpty(cached))
         {
             Log.Debug($"Cache hit for mode {mode}.");
+
+            // Nothing was sent, so nothing was masked. Saying otherwise would be a false claim.
+            _lastMaskedCount = 0;
             yield return cached;
             yield break;
         }
 
-        var session = await OpenAsync(input, mode, model, ct).ConfigureAwait(false);
-        var filter = new ResponseFilter(input);
+        // Masked before anything is sent, and only the masked text ever reaches the endpoint.
+        var settings = _settingsProvider();
+        var mask = MasksNames(settings) ? PrivacyMask.Create(input, settings.LlmProtectedTerms) : null;
+        var sent = mask?.Masked ?? input;
+
+        _lastMaskedCount = mask?.ReplacementCount ?? 0;
+
+        if (_lastMaskedCount > 0)
+        {
+            Log.Debug($"Masked {_lastMaskedCount} detail(s) before sending.");
+        }
+
+        var session = await OpenAsync(sent, mode, model, ct).ConfigureAwait(false);
+        var filter = new ResponseFilter(sent);
+        var restorer = mask is null ? null : new MaskRestorer(mask);
         var complete = new StringBuilder();
         var finished = false;
 
@@ -167,8 +197,14 @@ public sealed class LlmEngine : ITextEngine
                     continue;
                 }
 
-                // The filter holds tokens back until it can tell text from wrapping.
+                // The filter holds tokens back until it can tell text from wrapping, then the
+                // restorer puts the real names back before anything reaches the screen.
                 var visible = filter.Push(token);
+                if (restorer is not null)
+                {
+                    visible = restorer.Push(visible);
+                }
+
                 if (visible.Length > 0)
                 {
                     complete.Append(visible);
@@ -183,6 +219,11 @@ public sealed class LlmEngine : ITextEngine
         }
 
         var rest = filter.Finish();
+        if (restorer is not null)
+        {
+            rest = restorer.Push(rest) + restorer.Finish();
+        }
+
         if (rest.Length > 0)
         {
             complete.Append(rest);
@@ -236,6 +277,8 @@ public sealed class LlmEngine : ITextEngine
                 Content = JsonContent.Create(request, ChatJsonContext.Default.ChatRequest),
             };
 
+            Authorize(message, settings);
+
             // Without ResponseHeadersRead the client buffers the whole answer and nothing is
             // visible until generation has finished. This is the entire point of streaming.
             var response = await _http
@@ -253,6 +296,11 @@ public sealed class LlmEngine : ITextEngine
                 // A missing model is the common mistake and deserves its own message. By this
                 // point the name has already been checked against what is installed, so the
                 // message can say whether anything usable is there at all.
+                if (status is 401 or 403)
+                {
+                    throw new EngineUnavailableException(UiText.LlmNotAuthorised);
+                }
+
                 if (status == 404 || body.Contains("model", StringComparison.OrdinalIgnoreCase))
                 {
                     throw new EngineUnavailableException(UiText.LlmModelMissing(request.Model));
@@ -362,8 +410,11 @@ public sealed class LlmEngine : ITextEngine
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
             timeout.CancelAfter(TimeSpan.FromSeconds(ProbeTimeoutSeconds));
 
-            using var response = await _http.GetAsync(ModelsUrl(_settingsProvider()), timeout.Token)
-                .ConfigureAwait(false);
+            var settings = _settingsProvider();
+            using var request = new HttpRequestMessage(HttpMethod.Get, ModelsUrl(settings));
+            Authorize(request, settings);
+
+            using var response = await _http.SendAsync(request, timeout.Token).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -393,6 +444,79 @@ public sealed class LlmEngine : ITextEngine
     {
         _resolvedFor = null;
         _resolvedModel = null;
+    }
+
+    /// <summary>
+    /// Adds the bearer token when one is configured. Set per request rather than on the shared
+    /// client, so a changed key takes effect without a restart.
+    ///
+    /// The key is never logged, and it is never put into a message shown to the user.
+    /// </summary>
+    private static void Authorize(HttpRequestMessage message, AppSettings settings)
+    {
+        var key = settings.LlmApiKey?.Trim();
+        if (string.IsNullOrEmpty(key))
+        {
+            return;
+        }
+
+        message.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", key);
+    }
+
+    /// <summary>
+    /// Whether the details are replaced before sending. "auto" means: only when the endpoint is
+    /// not on this machine or the local network, because a local model sees the text regardless
+    /// and masking costs a little accuracy.
+    /// </summary>
+    internal static bool MasksNames(AppSettings settings) => settings.LlmMaskNames switch
+    {
+        AppSettings.MaskNamesAlways => true,
+        AppSettings.MaskNamesNever => false,
+        _ => IsExternal(settings.LlmEndpoint),
+    };
+
+    /// <summary>True when the address is neither this machine nor the local network.</summary>
+    internal static bool IsExternal(string? endpoint)
+    {
+        if (string.IsNullOrWhiteSpace(endpoint) ||
+            !Uri.TryCreate(endpoint, UriKind.Absolute, out var uri))
+        {
+            // An address that cannot be read is not demonstrably local, so treat it as external.
+            return !string.IsNullOrWhiteSpace(endpoint);
+        }
+
+        var host = uri.Host;
+
+        if (uri.IsLoopback ||
+            host.Equals("localhost", StringComparison.OrdinalIgnoreCase) ||
+            host.EndsWith(".local", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return !System.Net.IPAddress.TryParse(host, out var address) || !IsPrivate(address);
+    }
+
+    /// <summary>The ranges that RFC 1918 and RFC 4193 reserve for a local network.</summary>
+    private static bool IsPrivate(System.Net.IPAddress address)
+    {
+        if (address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6)
+        {
+            return address.IsIPv6LinkLocal || address.IsIPv6SiteLocal || IsUniqueLocal(address);
+        }
+
+        var octets = address.GetAddressBytes();
+        return octets[0] switch
+        {
+            10 => true,
+            127 => true,
+            169 when octets[1] == 254 => true,
+            172 when octets[1] is >= 16 and <= 31 => true,
+            192 when octets[1] == 168 => true,
+            _ => false,
+        };
+
+        static bool IsUniqueLocal(System.Net.IPAddress value) => (value.GetAddressBytes()[0] & 0xfe) == 0xfc;
     }
 
     internal static string ModelOf(AppSettings settings) =>
